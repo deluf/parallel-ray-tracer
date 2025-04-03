@@ -44,8 +44,8 @@ int main(){
     inc_x = vec_div(&inc_x, WIDTH);
     vec_t inc_y = vec_sub(&dl, &ul);
     inc_y = vec_div(&inc_y, HEIGHT);
-    for(int y = 0; y < WIDTH; y++){
-        for(int x = 0; x < HEIGHT; x++){
+    for(int y = 0; y < HEIGHT; y++){
+        for(int x = 0; x < WIDTH; x++){
             vec_t dir = vec_sub(&ul, &cam.pos);
             vec_t pos_x = vec_mul(&inc_x, x);
             vec_t pos_y = vec_mul(&inc_y, y);
