@@ -7,6 +7,7 @@
 #include "triangle.h"
 #include "light.h"
 #include "raytacer.h"
+#include "vec.h"
 
 #define WIDTH 1024
 #define HEIGHT 1024
