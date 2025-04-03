@@ -3,11 +3,13 @@
 
 #include "bmp_writer.h"
 #include "cam.h"
-#include "lerp.h"
 #include "sphere.h"
 #include "triangle.h"
 #include "light.h"
 #include "raytacer.h"
+
+#define WIDTH 1024
+#define HEIGHT 1024
 
 cam_t cam;
 
@@ -22,7 +24,7 @@ light_t* lights;
 
 vec_t amb_light = {.r = 0.1, .g = 0.1, .b = 0.1};
 
-vec_t pixels[512*512];
+vec_t pixels[WIDTH*HEIGHT];
 
 int main(){
     cam_init(&cam, &(vec_t){-9, 0, 8}, M_PI/4);
@@ -39,22 +41,22 @@ int main(){
     vec_t ur = screen_points[1];
     vec_t dl = screen_points[2];
     vec_t inc_x = vec_sub(&ur, &ul);
-    inc_x = vec_div(&inc_x, 512.0);
+    inc_x = vec_div(&inc_x, WIDTH);
     vec_t inc_y = vec_sub(&dl, &ul);
-    inc_y = vec_div(&inc_y, 512.0);
-    for(int y = 0; y < 512; y++){
-        for(int x = 0; x < 512; x++){
+    inc_y = vec_div(&inc_y, HEIGHT);
+    for(int y = 0; y < WIDTH; y++){
+        for(int x = 0; x < HEIGHT; x++){
             vec_t dir = vec_sub(&ul, &cam.pos);
             vec_t pos_x = vec_mul(&inc_x, x);
             vec_t pos_y = vec_mul(&inc_y, y);
             dir = vec_add(&dir, &pos_x);
             dir = vec_add(&dir, &pos_y);
-            pixels[x+y*512] = raytrace(cam.pos, dir, 0);
+            pixels[x+y*WIDTH] = raytrace(cam.pos, dir, 0);
         }
     }
 
     size_t img_len;
-    void* img = bmp_write(pixels, 512, 512, &img_len);
+    void* img = bmp_write(pixels, WIDTH, HEIGHT, &img_len);
 
     FILE* fptr = fopen("img.bmp", "wb");
     fwrite(img, 1, img_len, fptr);

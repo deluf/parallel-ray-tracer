@@ -18,7 +18,7 @@ extern light_t* lights;
 
 extern vec_t amb_light;
 
-#define MAX_ITER 32
+#define MAX_ITER 8
 #define EPSILON 1e-3
 
 static inline float min(float a, float b) { return (a < b) ? a : b; }
