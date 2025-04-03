@@ -10,6 +10,7 @@ typedef struct sphere_t {
     float r;
     vec_t ks;
     vec_t kd;
+    vec_t kr;
 } sphere_t;
 
 void sphere_init(sphere_t* sp, float r, const vec_t* pos, const vec_t* kd, const vec_t* ks);

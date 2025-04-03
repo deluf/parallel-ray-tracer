@@ -24,10 +24,8 @@ sphere_t* sphere_load(const char* filename, size_t* size){
     char line[256];
     while (fgets(line, sizeof(line), fptr) != NULL) {
         sphere_t s;
-        fscanf(fptr, "%f %f %f", &s.pos.x, &s.pos.y, &s.pos.z);
-        fscanf(fptr, "%f", &s.r);
-        fscanf(fptr, "%f %f %f", &s.kd.x, &s.kd.y, &s.kd.z);
-        fscanf(fptr, "%f %f %f", &s.ks.x, &s.ks.y, &s.ks.z);
+        sscanf(line, "%f %f %f %f %f %f %f %f %f %f", &s.pos.x, &s.pos.y, &s.pos.z, &s.r, &s.kd.r, &s.kd.g, &s.kd.b, &s.ks.r, &s.ks.g, &s.ks.b);
+        s.kr = (vec_t){0.5f, 0.5f, 0.5f};
         *size += 1;
         spheres = realloc(spheres, sizeof(sphere_t)*(*size));
         spheres[*size-1] = s;

@@ -2,11 +2,14 @@
 #include "math.h"
 
 float vec_dot(const vec_t* v1, const vec_t* v2){
-    return v1->x*v2->x + v1->y*v2->y + v2->z*v2->z;
+    return v1->x*v2->x + v1->y*v2->y + v1->z*v2->z;
 }
 
 float vec_dist(const vec_t* v1, const vec_t* v2){
-    return sqrtf((v1->x-v2->x)*(v1->x-v2->x) + (v1->y-v2->y)*(v1->y-v2->y) + (v1->z-v2->z)*(v1->z-v2->z));
+    float dx = v1->x - v2->x;
+    float dy = v1->y - v2->y;
+    float dz = v1->z - v2->z;
+    return sqrtf(dx * dx + dy * dy + dz * dz);
 }
 
 float vec_mag(const vec_t* v1){
@@ -34,5 +37,24 @@ vec_t vec_div(const vec_t* v1, float val){
 }
 
 vec_t vec_cross(const vec_t* v1, const vec_t* v2){
-    return (vec_t){v1->y*v2->z-v1->z*v2->y, v1->z*v2->x-v1->x*v2->z, v1->x*v2->y-v1->y*v2->x};
+    return (vec_t){
+        v1->y*v2->z - v1->z*v2->y,
+        v1->z*v2->x - v1->x*v2->z,
+        v1->x*v2->y - v1->y*v2->x
+    };
+}
+
+void vec_constrain(vec_t* v, const vec_t* min, const vec_t* max){
+    if(v->x < min->x)
+        v->x = min->x;
+    if(v->y < min->y)
+    v->y = min->y;
+    if(v->z < min->z)
+        v->z = min->z;
+    if(v->x > max->x)
+        v->x = max->x;
+    if(v->y > max->y)
+        v->y = max->y;
+    if(v->z > max->z)
+        v->z = max->z;
 }

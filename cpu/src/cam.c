@@ -5,7 +5,7 @@
 void cam_init(cam_t* cam, const vec_t* pos, float fov){
     cam->pos = *pos;
     cam->rot = (vec_t){0, 0, 0};
-    cam->fov = 1/tanf(fov/2.0f);
+    cam->fov = 1.0/tanf(fov/2.0f);
 }
 
 void cam_rotate(cam_t* cam, vec_t* p){
@@ -33,6 +33,9 @@ void cam_rotateZ(cam_t* cam, vec_t* p){
 }
 
 void cam_calculate_screen_coords(cam_t* cam, vec_t* vecs){
+    vecs[0] = (vec_t){-1, cam->fov, +1};
+    vecs[1] = (vec_t){+1, cam->fov, +1};
+    vecs[2] = (vec_t){-1, cam->fov, -1};
     cam_rotate(cam, &vecs[0]);
     cam_rotate(cam, &vecs[1]);
     cam_rotate(cam, &vecs[2]);
