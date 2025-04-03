@@ -21,4 +21,4 @@ build:
 
 clean:
 	rm -f raytracer.exe
-	rm -f img.bmp
+	rm -f render.bmp
