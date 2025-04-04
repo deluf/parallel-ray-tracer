@@ -1,23 +1,27 @@
 
 # Default target
-all: build
+all: optimize
 
 # Set compiler and additional flags according to the OS
 ifeq ($(OS),Windows_NT)
     CC = gcc
-    CFLAGS = -mavx2
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Darwin)
         CC = clang
-        CFLAGS = 
     else
         $(error Unsupported OS)
     endif
 endif
 
-build:
-	$(CC) $(CFLAGS) -Iinclude -O3 -flto src/*.c -o raytracer.exe
+naive:
+	$(CC) -Iinclude src/*.c -o raytracer.exe
+
+optimize:
+    $(CC) -Iinclude -O3 -flto src/*.c -o raytracer.exe
+
+unsafe:
+    $(CC) -Iinclude -Ofast -flto -march=native -funroll-loops -fprefetch-loop-arrays -ftree-vectorize -fopenmp src/*.c -o raytracer.exe
 
 clean:
 	rm -f raytracer.exe
