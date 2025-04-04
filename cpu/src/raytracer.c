@@ -26,11 +26,11 @@ static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, con
     vec_normalize(&h);
     
     float coeff = fmax(0, vec_dot(n, &h));
-    
+
     vec_t out;
-    out.r = fminf((kd->r*fmaxf(0, dot)+ks->r*coeff), 1);
-    out.g = fminf((kd->g*fmaxf(0, dot)+ks->g*coeff), 1);
-    out.b = fminf((kd->b*fmaxf(0, dot)+ks->b*coeff), 1);
+    out.r = kd->r*fmaxf(0, dot)+ks->r*coeff;
+    out.g = kd->g*fmaxf(0, dot)+ks->g*coeff;
+    out.b = kd->b*fmaxf(0, dot)+ks->b*coeff;
 
     return out;
 }
@@ -87,9 +87,12 @@ static float hit_sphere(const vec_t* origin, const vec_t* dir, const sphere_t* s
 }
 
 // light visibility - check if the ligh reach the points or is blocked by a sphere or traingle
-static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* light){
+static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const vec_t* light){
     vec_t tmp = vec_sub(origin, light);
+    vec_t tmp2 = vec_sub(light, origin);
     float light_dist = vec_dot(&tmp, &tmp);
+    if(vec_dot(&tmp2, n) < 0)
+        return 0;
     //check nearest sphere
     for(int i = 0; i < spheres_len; i++){
         float t = hit_sphere(origin, dir, &spheres[i]);
@@ -202,10 +205,10 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
             mag *= mag;
             float n_dot_l = vec_dot(&n, &l);
             vec_t col_ray = lambert_blinn(&ks, &kd, &n, &l, &dir, n_dot_l);
-            int V = light_v(&intersection, &l, &lights[i].pos);
-            col.r += V*lights[i].kl.r/mag*col_ray.r;
-            col.g += V*lights[i].kl.g/mag*col_ray.g;
-            col.b += V*lights[i].kl.b/mag*col_ray.b;
+            int V = light_v(&intersection, &l, &n, &lights[i].pos);
+            col.r += V*lights[i].kl.r*col_ray.r/mag;
+            col.g += V*lights[i].kl.g*col_ray.g/mag;
+            col.b += V*lights[i].kl.b*col_ray.b/mag;
         }
         
         //real raytracing EXTREMELY HEAVY
