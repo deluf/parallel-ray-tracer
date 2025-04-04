@@ -14,8 +14,11 @@
 
 #define WIDTH 1024
 #define HEIGHT 1024
-#define ITERATIONS 256
+#define ITERATIONS 10
 #define NUM_THREADS 16
+
+const int MAX_ITER = 8;
+const float EPSILON = 1e-4;
 
 typedef struct {
     int from_idx;
@@ -114,6 +117,8 @@ int main() {
     printf("Number of spheres: %zu\n", spheres_len);
     printf("Number of triangles: %zu\n", triangles_len);
     printf("Number of lights: %zu\n", lights_len);
+    printf("Number of reflected ray per pixel: %d\n", MAX_ITER);
+    printf("Epsilon value: %f\n", EPSILON);
     // Maybe add more (e.g., # of ray bounces, epsilon, etc.)
     
     printf("\n# Metrics #\n");

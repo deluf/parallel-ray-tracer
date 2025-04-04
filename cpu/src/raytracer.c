@@ -18,8 +18,8 @@ extern light_t* lights;
 
 extern vec_t amb_light;
 
-#define MAX_ITER 8
-#define EPSILON 1e-3
+extern const int MAX_ITER;
+extern const float EPSILON;
 
 static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, const vec_t* l, const vec_t* v, float dot){
     vec_t h = vec_add(l, v);
@@ -35,14 +35,14 @@ static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, con
     return out;
 }
 
-static float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* triangle, int* norm_dir){
+static float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, int* norm_dir){
     *norm_dir = 0;
-    vec_t e1 = vec_sub(&triangle->coords[1], &triangle->coords[0]);
-    vec_t e2 = vec_sub(&triangle->coords[2], &triangle->coords[0]);
+    vec_t e1 = vec_sub(&tr->coords[1], &tr->coords[0]);
+    vec_t e2 = vec_sub(&tr->coords[2], &tr->coords[0]);
     vec_t n = vec_cross(&e1, &e2);
     float det = -vec_dot(dir, &n);
     float invdet = 1.0/det;
-    vec_t ao = vec_sub(origin, &triangle->coords[0]);
+    vec_t ao = vec_sub(origin, &tr->coords[0]);
     vec_t dao = vec_cross(&ao, dir);
     float u = vec_dot(&e2, &dao)*invdet;
     float v = -vec_dot(&e1, &dao)*invdet;
@@ -52,12 +52,12 @@ static float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_
     }
 
     *norm_dir = 1;
-    e2 = vec_sub(&triangle->coords[1], &triangle->coords[0]);
-    e1 = vec_sub(&triangle->coords[2], &triangle->coords[0]);
+    e2 = vec_sub(&tr->coords[1], &tr->coords[0]);
+    e1 = vec_sub(&tr->coords[2], &tr->coords[0]);
     n = vec_cross(&e1, &e2);
     det = -vec_dot(dir, &n);
     invdet = 1.0/det;
-    ao = vec_sub(origin, &triangle->coords[0]);
+    ao = vec_sub(origin, &tr->coords[0]);
     dao = vec_cross(&ao, dir);
     u = vec_dot(&e2, &dao)*invdet;
     v = -vec_dot(&e1, &dao)*invdet;
