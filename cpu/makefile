@@ -5,7 +5,7 @@ all: build
 # Set compiler and additional flags according to the OS
 ifeq ($(OS),Windows_NT)
     CC = gcc
-    CFLAGS = -mavx
+    CFLAGS = -mavx2
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Darwin)

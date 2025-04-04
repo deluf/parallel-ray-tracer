@@ -21,19 +21,16 @@ extern vec_t amb_light;
 #define MAX_ITER 8
 #define EPSILON 1e-3
 
-static inline float min(float a, float b) { return (a < b) ? a : b; }
-static inline float max(float a, float b) { return (a > b) ? a : b; }
-
 static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, const vec_t* l, const vec_t* v, float dot){
     vec_t h = vec_add(l, v);
     vec_normalize(&h);
     
-    float coeff = max(0, vec_dot(n, &h));
+    float coeff = fmax(0, vec_dot(n, &h));
     
     vec_t out;
-    out.r = min((kd->r*max(0, dot)+ks->r*coeff), 1);
-    out.g = min((kd->g*max(0, dot)+ks->g*coeff), 1);
-    out.b = min((kd->b*max(0, dot)+ks->b*coeff), 1);
+    out.r = fminf((kd->r*fmaxf(0, dot)+ks->r*coeff), 1);
+    out.g = fminf((kd->g*fmaxf(0, dot)+ks->g*coeff), 1);
+    out.b = fminf((kd->b*fmaxf(0, dot)+ks->b*coeff), 1);
 
     return out;
 }
@@ -81,8 +78,8 @@ static float hit_sphere(const vec_t* origin, const vec_t* dir, const sphere_t* s
       return -1; 
     float t1 = (-b + sqrtf(delta))/(2* a);
     float t2 = (-b - sqrtf(delta))/(2* a);
-    float min_t = min(t1, t2);
-    float max_t = max(t1, t2);
+    float min_t = fminf(t1, t2);
+    float max_t = fmaxf(t1, t2);
     if(min_t <= 0)
       return max_t;
     else

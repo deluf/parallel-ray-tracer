@@ -2,6 +2,7 @@
 #define __RAYTRACER_H__
 
 #include "vec.h"
+#include "cam.h"
 
 vec_t raytrace(vec_t origin, vec_t dir, int iter);
 

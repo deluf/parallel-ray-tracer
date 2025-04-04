@@ -2,6 +2,7 @@
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "bmp_writer.h"
 #include "cam.h"
@@ -14,6 +15,14 @@
 #define WIDTH 1024
 #define HEIGHT 1024
 #define ITERATIONS 10
+#define NUM_THREADS 16
+
+typedef struct {
+    int from_idx;
+    int to_idx;
+} render_task_t;
+
+void* thread_render(void* arg);
 
 cam_t cam;
 
@@ -29,6 +38,10 @@ light_t* lights;
 vec_t amb_light = {.r = 0.1, .g = 0.1, .b = 0.1};
 
 vec_t pixels[WIDTH*HEIGHT];
+
+void render_frame();
+void render_segment(int from_idx, int to_idx);
+vec_t render_pixel(const vec_t* start, const vec_t* inc_x, const vec_t* inc_y, int x, int y);
 
 double compute_mean(double times[], int count) {
     double sum = 0.0;
@@ -57,7 +70,7 @@ void compute_ci(double mean, double stddev, int count, double* lower, double* up
 */
 
 int main() {
-    cam_init(&cam, &(vec_t){-9, 0, 8}, M_PI/4);
+    cam_init(&cam, &(vec_t){-9, 0, 8}, M_PI/2);
     cam.rot.z = -M_PI/3;
     cam.rot.x = -M_PI/6;
 
@@ -71,26 +84,7 @@ int main() {
     for (int i = 0; i < ITERATIONS; i++) {
         clock_t start = clock();
 
-        vec_t screen_points[3];
-        cam_calculate_screen_coords(&cam, screen_points);
-        vec_t ul = screen_points[0];
-        vec_t ur = screen_points[1];
-        vec_t dl = screen_points[2];
-        vec_t inc_x = vec_sub(&ur, &ul);
-        inc_x = vec_div(&inc_x, WIDTH);
-        vec_t inc_y = vec_sub(&dl, &ul);
-        inc_y = vec_div(&inc_y, HEIGHT);
-
-        for (int y = 0; y < HEIGHT; y++) {
-            for (int x = 0; x < WIDTH; x++) {
-                vec_t dir = vec_sub(&ul, &cam.pos);
-                vec_t pos_x = vec_mul(&inc_x, x);
-                vec_t pos_y = vec_mul(&inc_y, y);
-                dir = vec_add(&dir, &pos_x);
-                dir = vec_add(&dir, &pos_y);
-                pixels[x + y * WIDTH] = raytrace(cam.pos, dir, 0);
-            }
-        }
+        render_frame();
 
         clock_t end = clock();
         times[i] = (double)(end - start) / (CLOCKS_PER_SEC) * 1000;
@@ -128,4 +122,71 @@ int main() {
     printf("Pixel time (mean): %.3f ms\n", (mean * 1000) / (WIDTH * HEIGHT));
     
     return 0;
+}
+
+void render_frame(){
+    vec_t screen_points[3];
+    cam_calculate_screen_coords(&cam, screen_points);
+    vec_t ul = screen_points[0];
+    vec_t ur = screen_points[1];
+    vec_t dl = screen_points[2];
+    vec_t inc_x = vec_sub(&ur, &ul);
+    inc_x = vec_div(&inc_x, WIDTH);
+    vec_t inc_y = vec_sub(&dl, &ul);
+    inc_y = vec_div(&inc_y, HEIGHT);
+
+    pthread_t threads[NUM_THREADS];
+    render_task_t tasks[NUM_THREADS];
+
+    int pixels_per_thread = (WIDTH * HEIGHT) / NUM_THREADS;
+
+    for(int i = 0; i < NUM_THREADS; i++) {
+        tasks[i].from_idx = i * pixels_per_thread;
+        tasks[i].to_idx = (i == NUM_THREADS - 1) ? (WIDTH * HEIGHT) : (i + 1) * pixels_per_thread;
+
+        pthread_create(&threads[i], NULL, thread_render, &tasks[i]);
+    }
+
+    for(int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+}
+
+void render_segment(int from_idx, int to_idx){
+    int from_x = from_idx % WIDTH;
+    int from_y = from_idx / WIDTH;
+    int to_x = to_idx % WIDTH;
+    int to_y = to_idx / WIDTH;
+    int pixels_len = to_idx - from_idx;
+    vec_t screen_points[3];
+    cam_calculate_screen_coords(&cam, screen_points);
+    vec_t ul = screen_points[0];
+    vec_t ur = screen_points[1];
+    vec_t dl = screen_points[2];
+    vec_t inc_x = vec_sub(&ur, &ul);
+    inc_x = vec_div(&inc_x, WIDTH);
+    vec_t inc_y = vec_sub(&dl, &ul);
+    inc_y = vec_div(&inc_y, HEIGHT);
+
+    for(int i = 0; i < pixels_len; i++){
+        int idx = from_idx + i;
+        int x = (idx % WIDTH);
+        int y = (idx / WIDTH);
+        pixels[from_idx + i] = render_pixel(&ul, &inc_x, &inc_y, x, y);
+    }
+}
+
+vec_t render_pixel(const vec_t* start, const vec_t* inc_x, const vec_t* inc_y, int x, int y){
+    vec_t dir = vec_sub(start, &cam.pos);
+    vec_t pos_x = vec_mul(inc_x, x);
+    vec_t pos_y = vec_mul(inc_y, y);
+    dir = vec_add(&dir, &pos_x);
+    dir = vec_add(&dir, &pos_y);
+    return raytrace(cam.pos, dir, 0);
+}
+
+void* thread_render(void* arg) {
+    render_task_t* task = (render_task_t*)arg;
+    render_segment(task->from_idx, task->to_idx);
+    return NULL;
 }

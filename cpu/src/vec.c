@@ -45,16 +45,10 @@ vec_t vec_cross(const vec_t* v1, const vec_t* v2){
 }
 
 void vec_constrain(vec_t* v, const vec_t* min, const vec_t* max){
-    if(v->x < min->x)
-        v->x = min->x;
-    if(v->y < min->y)
-    v->y = min->y;
-    if(v->z < min->z)
-        v->z = min->z;
-    if(v->x > max->x)
-        v->x = max->x;
-    if(v->y > max->y)
-        v->y = max->y;
-    if(v->z > max->z)
-        v->z = max->z;
+    v->x = fmaxf(v->x, min->x);
+    v->y = fmaxf(v->y, min->y);
+    v->z = fmaxf(v->z, min->z);
+    v->x = fminf(v->x, max->x);
+    v->y = fminf(v->y, max->y);
+    v->z = fminf(v->z, max->z);
 }
