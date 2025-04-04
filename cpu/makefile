@@ -21,7 +21,7 @@ optimize:
 	$(CC) -Iinclude -O3 -flto src/*.c -o raytracer.exe
 
 unsafe:
-	$(CC) -Iinclude -Ofast -flto -march=native -funroll-loops -fprefetch-loop-arrays -ftree-vectorize -fopenmp src/*.c -o raytracer.exe
+	$(CC) -Iinclude -Ofast -march=native -flto src/*.c -o raytracer.exe
 
 clean:
 	rm -f raytracer.exe

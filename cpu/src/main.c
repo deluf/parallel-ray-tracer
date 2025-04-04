@@ -14,7 +14,7 @@
 
 #define WIDTH 1024
 #define HEIGHT 1024
-#define ITERATIONS 10
+#define ITERATIONS 256
 #define NUM_THREADS 16
 
 typedef struct {
@@ -60,14 +60,12 @@ double compute_stddev(double times[], int count, double mean) {
     return sqrt(sum / count);
 }
 
-/* Maybe useful for future reference
 void compute_ci(double mean, double stddev, int count, double* lower, double* upper) {
     double z = 1.959963984540054;
     double standard_error = stddev / sqrt(count);
     *lower = mean - z * standard_error;
     *upper = mean + z * standard_error;
 }
-*/
 
 int main() {
     cam_init(&cam, &(vec_t){-9, 0, 8}, M_PI/2);
@@ -98,14 +96,19 @@ int main() {
     FILE* fptr = fopen("render.bmp", "wb");
     fwrite(img, 1, img_len, fptr);
     fclose(fptr);
+    free(img);
+
+    free(spheres);
+    free(triangles);
+    free(lights);
 
     // Compute metrics
     double mean = compute_mean(times, ITERATIONS);
     double stddev = compute_stddev(times, ITERATIONS, mean);
     
-    //double lower_ci, upper_ci;
-    //compute_ci(mean, stddev, ITERATIONS, &lower_ci, &upper_ci);
-    //printf("Frame time (mean +/- 95%% CI): [%.3f, %.3f] ms\n", lower_ci, upper_ci);
+    double lower_ci, upper_ci;
+    compute_ci(mean, stddev, ITERATIONS, &lower_ci, &upper_ci);
+    printf("Frame time (mean +/- 95%% CI): [%.3f, %.3f] ms\n", lower_ci, upper_ci);
 
     printf("\n# Scene complexity #\n");
     printf("Resolution: %d x %d\n", WIDTH, HEIGHT);

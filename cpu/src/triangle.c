@@ -86,6 +86,15 @@ triangle_t* triangles_load(const char* objname, const char* mtlname, size_t* siz
     }
     
     free(vertices);
+
+    for(int i = 0; i < obj_line_count; i++)
+        free(obj_lines[i]);
+    free(obj_lines);
+
+    for(int i = 0; i < mtl_line_count; i++)
+        free(mtl_lines[i]);
+    free(mtl_lines);
+
     *size = count;
     return triangles;   
 }
