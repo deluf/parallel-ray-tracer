@@ -108,8 +108,7 @@ int main() {
     
     double lower_ci, upper_ci;
     compute_ci(mean, stddev, ITERATIONS, &lower_ci, &upper_ci);
-    printf("Frame time (mean +/- 95%% CI): [%.3f, %.3f] ms\n", lower_ci, upper_ci);
-
+    
     printf("\n# Scene complexity #\n");
     printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
     printf("Number of spheres: %zu\n", spheres_len);
@@ -120,6 +119,7 @@ int main() {
     printf("\n# Metrics #\n");
     printf("Total execution time of %d frames: %.3f ms\n", ITERATIONS, mean * ITERATIONS);
     printf("Frame time (mean): %.3f ms\n", mean);
+    printf("Frame time (mean +/- 95%% CI): [%.3f, %.3f] ms\n", lower_ci, upper_ci);
     printf("Frame time (stddev): %.3f ms^2\n", stddev);
     printf("Expected FPS: %.3f\n", 1000 / mean);
     printf("Pixel time (mean): %.3f ms\n", (mean * 1000) / (WIDTH * HEIGHT));
