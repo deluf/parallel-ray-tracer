@@ -14,6 +14,6 @@ void cam_rotate(cam_t* cam, vec_t* p);
 void cam_rotateX(cam_t* cam, vec_t* p);
 void cam_rotateY(cam_t* cam, vec_t* p);
 void cam_rotateZ(cam_t* cam, vec_t* p);
-void cam_calculate_screen_coords(cam_t* cam, vec_t* vecs);
+void cam_calculate_screen_coords(cam_t* cam, vec_t* vecs, float aspect_ratio);
 
 #endif

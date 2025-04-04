@@ -32,10 +32,10 @@ void cam_rotateZ(cam_t* cam, vec_t* p){
     p->y = tmp.x*sinf(cam->rot.z)+tmp.y*cosf(cam->rot.z);
 }
 
-void cam_calculate_screen_coords(cam_t* cam, vec_t* vecs){
-    vecs[0] = (vec_t){-1, cam->fov, +1};
-    vecs[1] = (vec_t){+1, cam->fov, +1};
-    vecs[2] = (vec_t){-1, cam->fov, -1};
+void cam_calculate_screen_coords(cam_t* cam, vec_t* vecs, float aspect_ratio){
+    vecs[0] = (vec_t){-1*aspect_ratio, cam->fov, +1};
+    vecs[1] = (vec_t){+1*aspect_ratio, cam->fov, +1};
+    vecs[2] = (vec_t){-1*aspect_ratio, cam->fov, -1};
     cam_rotate(cam, &vecs[0]);
     cam_rotate(cam, &vecs[1]);
     cam_rotate(cam, &vecs[2]);

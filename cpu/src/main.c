@@ -12,13 +12,13 @@
 #include "raytacer.h"
 #include "vec.h"
 
-#define WIDTH 1024
-#define HEIGHT 1024
-#define ITERATIONS 10
+#define WIDTH 1920
+#define HEIGHT 1080
+#define ITERATIONS 1
 #define NUM_THREADS 16
 
 const int MAX_ITER = 8;
-const float EPSILON = 1e-4;
+const float EPSILON = 1e-3;
 
 typedef struct {
     int from_idx;
@@ -71,9 +71,9 @@ void compute_ci(double mean, double stddev, int count, double* lower, double* up
 }
 
 int main() {
-    cam_init(&cam, &(vec_t){-9, 0, 8}, M_PI/2);
-    cam.rot.z = -M_PI/3;
-    cam.rot.x = -M_PI/6;
+    cam_init(&cam, &(vec_t){4, -10, 3}, M_PI/3);
+    cam.rot.z = 0.1;
+    //cam.rot.x = -M_PI/6;
 
     // Load resources once
     spheres = sphere_load("data/spheres.obj", &spheres_len);
@@ -133,16 +133,6 @@ int main() {
 }
 
 void render_frame(){
-    vec_t screen_points[3];
-    cam_calculate_screen_coords(&cam, screen_points);
-    vec_t ul = screen_points[0];
-    vec_t ur = screen_points[1];
-    vec_t dl = screen_points[2];
-    vec_t inc_x = vec_sub(&ur, &ul);
-    inc_x = vec_div(&inc_x, WIDTH);
-    vec_t inc_y = vec_sub(&dl, &ul);
-    inc_y = vec_div(&inc_y, HEIGHT);
-
     pthread_t threads[NUM_THREADS];
     render_task_t tasks[NUM_THREADS];
 
@@ -167,7 +157,7 @@ void render_segment(int from_idx, int to_idx){
     int to_y = to_idx / WIDTH;
     int pixels_len = to_idx - from_idx;
     vec_t screen_points[3];
-    cam_calculate_screen_coords(&cam, screen_points);
+    cam_calculate_screen_coords(&cam, screen_points, (float)WIDTH/HEIGHT);
     vec_t ul = screen_points[0];
     vec_t ur = screen_points[1];
     vec_t dl = screen_points[2];
