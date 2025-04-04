@@ -90,7 +90,7 @@ static float hit_sphere(const vec_t* origin, const vec_t* dir, const sphere_t* s
 static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const vec_t* light){
     vec_t tmp = vec_sub(origin, light);
     vec_t tmp2 = vec_sub(light, origin);
-    float light_dist = vec_dot(&tmp, &tmp);
+    float light_dist2 = vec_dot(&tmp, &tmp);
     if(vec_dot(&tmp2, n) < 0)
         return 0;
     //check nearest sphere
@@ -100,7 +100,7 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
             vec_t dir_scaled = vec_mul(dir, t);
             vec_t intersection = vec_add(origin, &dir_scaled);
             vec_t o_minus_i = vec_sub(origin, &intersection);
-            if(light_dist > vec_dot(&o_minus_i, &o_minus_i) )
+            if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i) )
                 return 0;
         }
     }
@@ -112,7 +112,7 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
             vec_t dir_scaled = vec_mul(dir, t);
             vec_t intersection = vec_add(origin, &dir_scaled);
             vec_t o_minus_i = vec_sub(origin, &intersection);
-            if(light_dist > vec_dot(&o_minus_i, &o_minus_i) )
+            if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i) )
                 return 0;
         }
     }
