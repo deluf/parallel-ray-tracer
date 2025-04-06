@@ -18,7 +18,7 @@ extern light_t* lights;
 
 extern vec_t amb_light;
 
-extern const int MAX_ITER;
+extern const int BOUNCES;
 extern const float EPSILON;
 
 static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, const vec_t* l, const vec_t* v, float dot){
@@ -122,7 +122,7 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
 vec_t raytrace(vec_t origin, vec_t dir, int iter){
     vec_t col = {0};
   
-    if(iter == MAX_ITER)
+    if(iter == BOUNCES)
         return col;
     
     int index = -1;

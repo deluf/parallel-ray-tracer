@@ -1,27 +1,26 @@
 
 # Default target
-all: optimize
+all: unsafe
 
 # Set compiler and additional flags according to the OS
-ifeq ($(OS),Windows_NT)
-    CC = gcc
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    CC = clang
 else
-    UNAME_S := $(shell uname -s)
-    ifeq ($(UNAME_S),Darwin)
-        CC = clang
-    else
-        $(error Unsupported OS)
-    endif
+    CC = gcc
 endif
 
 naive:
-	$(CC) -Iinclude src/*.c -o raytracer.exe
+	$(CC) -Iinclude src/*.c -o raytracer.exe -lm
 
 optimize:
-	$(CC) -Iinclude -O3 -flto src/*.c -o raytracer.exe
+	$(CC) -Iinclude -O3 -flto src/*.c -o raytracer.exe -lm
 
 unsafe:
-	$(CC) -g -Iinclude -Ofast -march=native -flto src/*.c -o raytracer.exe
+	$(CC) -Iinclude -Ofast -march=native -flto src/*.c -o raytracer.exe -lm
+
+debug:
+	$(CC) -g -Iinclude -Ofast -march=native -flto src/*.c -o raytracer.exe -lm
 
 clean:
 	rm -f raytracer.exe
