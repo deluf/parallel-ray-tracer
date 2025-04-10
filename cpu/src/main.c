@@ -1,3 +1,7 @@
+
+// Enable POSIX features (e.g., pthreads, real-time clock)
+#define _POSIX_C_SOURCE 199506L
+
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
@@ -13,12 +17,25 @@
 #include "vec.h"
 #include "bvh.h"
 
+<<<<<<< HEAD
 #define WIDTH 64
 #define HEIGHT 64
-#define ITERATIONS 1
-#define NUM_THREADS 16
+=======
+#ifndef M_PI
+#    define M_PI 3.14159265358979323846
+#endif
 
+#define WIDTH 1920
+#define HEIGHT 1080
+>>>>>>> eb9318ffabe9ddf9a8904eb44b051692ebb0cfcd
+#define ITERATIONS 1
+#define NUM_THREADS 12
+
+<<<<<<< HEAD
 const int MAX_ITER = 4;
+=======
+const int BOUNCES = 10;
+>>>>>>> eb9318ffabe9ddf9a8904eb44b051692ebb0cfcd
 const float EPSILON = 1e-3;
 
 typedef struct {
@@ -64,11 +81,10 @@ double compute_stddev(double times[], int count, double mean) {
     return sqrt(sum / count);
 }
 
-void compute_ci(double mean, double stddev, int count, double* lower, double* upper) {
+double compute_ci(double mean, double stddev, int count) {
     double z = 1.959963984540054;
     double standard_error = stddev / sqrt(count);
-    *lower = mean - z * standard_error;
-    *upper = mean + z * standard_error;
+    return z * standard_error;
 }
 
 int main() {
@@ -99,12 +115,17 @@ int main() {
     // Maybe add more (e.g., # of ray bounces, epsilon, etc.)
 
     for (int i = 0; i < ITERATIONS; i++) {
-        clock_t start = clock();
+        struct timespec start, finish;
+        clock_gettime(CLOCK_MONOTONIC, &start);
 
         render_frame();
 
-        clock_t end = clock();
-        times[i] = (double)(end - start) / (CLOCKS_PER_SEC) * 1000;
+        clock_gettime(CLOCK_MONOTONIC, &finish);
+
+        double elapsed = (finish.tv_sec - start.tv_sec);
+        elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+
+        times[i] = elapsed * 1000; // Convert to milliseconds
 
         printf("Iteration %d completed in %.3f ms\n", i + 1, times[i]);
     }
@@ -124,17 +145,29 @@ int main() {
     // Compute metrics
     double mean = compute_mean(times, ITERATIONS);
     double stddev = compute_stddev(times, ITERATIONS, mean);
+    double ci_offset = compute_ci(mean, stddev, ITERATIONS);
     
-    double lower_ci, upper_ci;
-    compute_ci(mean, stddev, ITERATIONS, &lower_ci, &upper_ci);
+<<<<<<< HEAD
+=======
+    printf("\n# Scene complexity #\n");
+    printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
+    printf("Number of spheres: %zu\n", spheres_len);
+    printf("Number of triangles: %zu\n", triangles_len);
+    printf("Number of lights: %zu\n", lights_len);
+    printf("Number of ray bounces: %d\n", BOUNCES);
+    //printf("Epsilon value: %f\n", EPSILON); -> Does not affect performance
     
+>>>>>>> eb9318ffabe9ddf9a8904eb44b051692ebb0cfcd
     printf("\n# Metrics #\n");
     printf("Total execution time of %d frames: %.3f ms\n", ITERATIONS, mean * ITERATIONS);
-    printf("Frame time (mean): %.3f ms\n", mean);
-    printf("Frame time (mean +/- 95%% CI): [%.3f, %.3f] ms\n", lower_ci, upper_ci);
+    if (ITERATIONS >= 30)
+        printf("Frame time (mean +/- 95%% CI): %.3f +/- %.3f = [%.3f, %.3f] ms\n",
+            mean, ci_offset, mean - ci_offset, mean + ci_offset);
+    else
+        printf("Frame time (mean): %.3f ms\n", mean);
     printf("Frame time (stddev): %.3f ms^2\n", stddev);
     printf("Expected FPS: %.3f\n", 1000 / mean);
-    printf("Pixel time (mean): %.3f ms\n", (mean * 1000) / (WIDTH * HEIGHT));
+    //printf("Pixel time (mean): %.3f ms\n", (mean * 1000) / (WIDTH * HEIGHT));
     
     return 0;
 }

@@ -163,4 +163,5 @@ $RECYCLE.BIN/
 
 # VSCode settings
 .vscode/
+.vs/
 *.s
