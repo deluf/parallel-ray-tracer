@@ -11,13 +11,14 @@
 #include "light.h"
 #include "raytacer.h"
 #include "vec.h"
+#include "bvh.h"
 
-#define WIDTH 1920
-#define HEIGHT 1080
+#define WIDTH 64
+#define HEIGHT 64
 #define ITERATIONS 1
 #define NUM_THREADS 16
 
-const int MAX_ITER = 8;
+const int MAX_ITER = 4;
 const float EPSILON = 1e-3;
 
 typedef struct {
@@ -71,8 +72,8 @@ void compute_ci(double mean, double stddev, int count, double* lower, double* up
 }
 
 int main() {
-    cam_init(&cam, &(vec_t){4, -10, 3}, M_PI/3);
-    cam.rot.z = 0.1;
+    cam_init(&cam, &(vec_t){-8, -9, 3}, M_PI/3);
+    cam.rot.z = -M_PI/4.1;
     //cam.rot.x = -M_PI/6;
 
     // Load resources once
@@ -80,7 +81,22 @@ int main() {
     triangles = triangles_load("data/triangles.obj", "data/triangles.mtl", &triangles_len);
     lights = lights_load("data/lights.obj", &lights_len);
 
+    printf("Scene loaded.\n");
+
+    bvh_build(triangles, triangles_len);
+
+    printf("BVH built.\n");
+
     double times[ITERATIONS];
+
+    printf("\n# Scene complexity #\n");
+    printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
+    printf("Number of spheres: %zu\n", spheres_len);
+    printf("Number of triangles: %zu\n", triangles_len);
+    printf("Number of lights: %zu\n", lights_len);
+    printf("Number of reflected ray per pixel: %d\n", MAX_ITER);
+    printf("Epsilon value: %f\n", EPSILON);
+    // Maybe add more (e.g., # of ray bounces, epsilon, etc.)
 
     for (int i = 0; i < ITERATIONS; i++) {
         clock_t start = clock();
@@ -111,15 +127,6 @@ int main() {
     
     double lower_ci, upper_ci;
     compute_ci(mean, stddev, ITERATIONS, &lower_ci, &upper_ci);
-    
-    printf("\n# Scene complexity #\n");
-    printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
-    printf("Number of spheres: %zu\n", spheres_len);
-    printf("Number of triangles: %zu\n", triangles_len);
-    printf("Number of lights: %zu\n", lights_len);
-    printf("Number of reflected ray per pixel: %d\n", MAX_ITER);
-    printf("Epsilon value: %f\n", EPSILON);
-    // Maybe add more (e.g., # of ray bounces, epsilon, etc.)
     
     printf("\n# Metrics #\n");
     printf("Total execution time of %d frames: %.3f ms\n", ITERATIONS, mean * ITERATIONS);

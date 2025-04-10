@@ -2,6 +2,7 @@
 #include "triangle.h"
 #include "sphere.h"
 #include "light.h"
+#include "bvh.h"
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
@@ -35,18 +36,18 @@ static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, con
     return out;
 }
 
-static float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, int* norm_dir){
+float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, int* norm_dir){
     *norm_dir = 0;
     vec_t e1 = vec_sub(&tr->coords[1], &tr->coords[0]);
     vec_t e2 = vec_sub(&tr->coords[2], &tr->coords[0]);
     vec_t n = vec_cross(&e1, &e2);
-    float det = -vec_dot(dir, &n);
+    volatile float det = -vec_dot(dir, &n);
     float invdet = 1.0/det;
     vec_t ao = vec_sub(origin, &tr->coords[0]);
     vec_t dao = vec_cross(&ao, dir);
-    float u = vec_dot(&e2, &dao)*invdet;
-    float v = -vec_dot(&e1, &dao)*invdet;
-    float t = vec_dot(&ao, &n)*invdet;
+    volatile float u = vec_dot(&e2, &dao)*invdet;
+    volatile float v = -vec_dot(&e1, &dao)*invdet;
+    volatile float t = vec_dot(&ao, &n)*invdet;
     if(det > 0 && t > 0 && u > 0 && v > 0 && (u+v) < 1){
         return t;  
     }
@@ -146,6 +147,24 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
         }
     }
     //check nearest triangle
+    /*
+    float t_tmp = FLT_MAX;
+    int norm_tmp;
+    int tri_idx;
+    bvh_intersect(&origin, &dir, &t_tmp, &norm_tmp, &tri_idx, 0);
+    if(t_tmp != FLT_MAX && t_tmp < t){
+        vec_t dir_scaled = vec_mul(&dir, t_tmp);
+        vec_t intersection = vec_add(&origin, &dir_scaled);
+        float d = vec_dist(&origin, &intersection);
+        if(d < dist){
+            index = tri_idx;
+            dist = d;
+            t = t_tmp;
+            type = 1;
+            norm_dir = norm_tmp;
+        }
+    }
+    */
     for(int i = 0; i < triangles_len; i++){
         int norm_tmp;
         float t_tmp = hit_triangle(&origin, &dir, &triangles[i], &norm_tmp);
@@ -217,10 +236,12 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
         vec_t r = vec_add(&dir, &n_scaled);
         vec_normalize(&r);
         
-        vec_t col_ray = raytrace(intersection, r, iter+1);
-        col.r += kr.r*col_ray.r;
-        col.g += kr.g*col_ray.g;
-        col.b += kr.b*col_ray.b;
+        if(vec_mag(&kr) > 0.0){
+            vec_t col_ray = raytrace(intersection, r, iter+1);
+            col.r += kr.r*col_ray.r;
+            col.g += kr.g*col_ray.g;
+            col.b += kr.b*col_ray.b;
+        }
     }
 
     vec_t vec_0 = {0, 0, 0};

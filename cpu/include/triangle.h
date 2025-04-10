@@ -7,6 +7,7 @@
 
 typedef struct triangle_t {
     vec_t coords[3];
+    float centroid[3];
     vec_t ks;
     vec_t kd;
     vec_t kr;

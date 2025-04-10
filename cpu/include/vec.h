@@ -3,6 +3,7 @@
 
 typedef struct vec_t {
     union {
+        float arr[3];
         struct {
             float x;
             float y;
@@ -26,5 +27,8 @@ vec_t vec_sub(const vec_t* v1, const vec_t* v2);
 vec_t vec_div(const vec_t* v1, float val);
 vec_t vec_cross(const vec_t* v1, const vec_t* v2);
 void vec_constrain(vec_t* v, const vec_t* min, const vec_t* max);
+
+vec_t vec_min(const vec_t* v1, const vec_t* v2);
+vec_t vec_max(const vec_t* v1, const vec_t* v2);
 
 #endif

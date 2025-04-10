@@ -52,3 +52,18 @@ void vec_constrain(vec_t* v, const vec_t* min, const vec_t* max){
     v->y = fminf(v->y, max->y);
     v->z = fminf(v->z, max->z);
 }
+
+vec_t vec_min(const vec_t* v1, const vec_t* v2){
+    return (vec_t){
+        fminf(v1->x, v2->x),
+        fminf(v1->y, v2->y),
+        fminf(v1->z, v2->z)
+    };
+}
+vec_t vec_max(const vec_t* v1, const vec_t* v2){
+    return (vec_t){
+        fmaxf(v1->x, v2->x),
+        fmaxf(v1->y, v2->y),
+        fmaxf(v1->z, v2->z)
+    };
+}

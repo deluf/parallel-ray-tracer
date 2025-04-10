@@ -66,12 +66,16 @@ triangle_t* triangles_load(const char* objname, const char* mtlname, size_t* siz
         if (strncmp(obj_lines[i], "usemtl", 6) == 0) {
             char material[256];
             sscanf(obj_lines[i], "usemtl %s", material);
-            
+
             for(int j = 0; j < mtl_line_count; j++) {
-                if(strncmp(mtl_lines[j], "newmtl", 6) == 0 && strstr(mtl_lines[j], material)) {
-                    sscanf(mtl_lines[j + 3], "Kd %f %f %f", &kd.r, &kd.g, &kd.b);
-                    sscanf(mtl_lines[j + 4], "Ks %f %f %f", &ks.r, &ks.g, &ks.b);
-                    sscanf(mtl_lines[j + 5], "Kr %f %f %f", &kr.r, &kr.g, &kr.b);
+                if(!strncmp(mtl_lines[j], "newmtl", 6)){
+                    char expected[256];
+                    sprintf(expected, "newmtl %s\n", material);
+                    if(!strcmp(mtl_lines[j], expected)) {
+                        sscanf(mtl_lines[j + 3], "Kd %f %f %f", &kd.r, &kd.g, &kd.b);
+                        sscanf(mtl_lines[j + 4], "Ks %f %f %f", &ks.r, &ks.g, &ks.b);
+                        sscanf(mtl_lines[j + 5], "Kr %f %f %f", &kr.r, &kr.g, &kr.b);
+                    }
                 }
             }
         }
