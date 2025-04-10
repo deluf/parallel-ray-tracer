@@ -17,25 +17,16 @@
 #include "vec.h"
 #include "bvh.h"
 
-<<<<<<< HEAD
-#define WIDTH 64
-#define HEIGHT 64
-=======
 #ifndef M_PI
 #    define M_PI 3.14159265358979323846
 #endif
 
-#define WIDTH 1920
-#define HEIGHT 1080
->>>>>>> eb9318ffabe9ddf9a8904eb44b051692ebb0cfcd
+#define WIDTH 128
+#define HEIGHT 128
 #define ITERATIONS 1
 #define NUM_THREADS 12
 
-<<<<<<< HEAD
-const int MAX_ITER = 4;
-=======
-const int BOUNCES = 10;
->>>>>>> eb9318ffabe9ddf9a8904eb44b051692ebb0cfcd
+const int BOUNCES = 4;
 const float EPSILON = 1e-3;
 
 typedef struct {
@@ -110,7 +101,7 @@ int main() {
     printf("Number of spheres: %zu\n", spheres_len);
     printf("Number of triangles: %zu\n", triangles_len);
     printf("Number of lights: %zu\n", lights_len);
-    printf("Number of reflected ray per pixel: %d\n", MAX_ITER);
+    printf("Number of reflected ray per pixel: %d\n", BOUNCES);
     printf("Epsilon value: %f\n", EPSILON);
     // Maybe add more (e.g., # of ray bounces, epsilon, etc.)
 
@@ -147,8 +138,6 @@ int main() {
     double stddev = compute_stddev(times, ITERATIONS, mean);
     double ci_offset = compute_ci(mean, stddev, ITERATIONS);
     
-<<<<<<< HEAD
-=======
     printf("\n# Scene complexity #\n");
     printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
     printf("Number of spheres: %zu\n", spheres_len);
@@ -157,7 +146,6 @@ int main() {
     printf("Number of ray bounces: %d\n", BOUNCES);
     //printf("Epsilon value: %f\n", EPSILON); -> Does not affect performance
     
->>>>>>> eb9318ffabe9ddf9a8904eb44b051692ebb0cfcd
     printf("\n# Metrics #\n");
     printf("Total execution time of %d frames: %.3f ms\n", ITERATIONS, mean * ITERATIONS);
     if (ITERATIONS >= 30)

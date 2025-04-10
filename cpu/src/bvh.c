@@ -22,7 +22,7 @@ static bool bvh_intersect_AABB(const vec_t* origin, const vec_t* dir, float t, c
 
 bvh_t* bvh_build(triangle_t* triangles, size_t triangles_len){
     bvh = (bvh_t*)malloc(sizeof(bvh_t)*triangles_len*2);
-    memset(bvh, 0, sizeof(bvh)*triangles_len*2);
+    memset(bvh, 0, sizeof(bvh_t)*triangles_len*2);
     triangles_idx = (int*)malloc(sizeof(int)*triangles_len);
     for(int i = 0; i < triangles_len; i++){
         triangles_idx[i] = i;
