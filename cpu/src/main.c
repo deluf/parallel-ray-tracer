@@ -21,12 +21,12 @@
 #    define M_PI 3.14159265358979323846
 #endif
 
-#define WIDTH 128
-#define HEIGHT 128
+#define WIDTH 320
+#define HEIGHT 180
 #define ITERATIONS 1
 #define NUM_THREADS 12
 
-const int BOUNCES = 4;
+const int BOUNCES = 1;
 const float EPSILON = 1e-3;
 
 typedef struct {
@@ -82,27 +82,28 @@ int main() {
     cam_init(&cam, &(vec_t){0, -10, 3}, M_PI/3.2);
     cam.rot.x = -M_PI/12;
 
+    printf("Loading scene...\n");
+
     // Load resources once
     spheres = sphere_load("data/spheres.obj", &spheres_len);
     triangles = triangles_load("data/triangles.obj", "data/triangles.mtl", &triangles_len);
     lights = lights_load("data/lights.obj", &lights_len);
 
-    printf("Scene loaded.\n");
 
+    printf("Building BVH...\n");
     bvh_build(triangles, triangles_len);
-
-    printf("BVH built.\n");
-
-    double times[ITERATIONS];
 
     printf("\n# Scene complexity #\n");
     printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
     printf("Number of spheres: %zu\n", spheres_len);
     printf("Number of triangles: %zu\n", triangles_len);
     printf("Number of lights: %zu\n", lights_len);
-    printf("Number of reflected ray per pixel: %d\n", BOUNCES);
-    printf("Epsilon value: %f\n", EPSILON);
-    // Maybe add more (e.g., # of ray bounces, epsilon, etc.)
+    printf("Number of ray bounces: %d\n", BOUNCES);
+
+
+    printf("\nRendering...\n");
+
+    double times[ITERATIONS];
 
     for (int i = 0; i < ITERATIONS; i++) {
         struct timespec start, finish;
@@ -136,14 +137,6 @@ int main() {
     double mean = compute_mean(times, ITERATIONS);
     double stddev = compute_stddev(times, ITERATIONS, mean);
     double ci_offset = compute_ci(mean, stddev, ITERATIONS);
-    
-    printf("\n# Scene complexity #\n");
-    printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
-    printf("Number of spheres: %zu\n", spheres_len);
-    printf("Number of triangles: %zu\n", triangles_len);
-    printf("Number of lights: %zu\n", lights_len);
-    printf("Number of ray bounces: %d\n", BOUNCES);
-    //printf("Epsilon value: %f\n", EPSILON); -> Does not affect performance
     
     printf("\n# Metrics #\n");
     printf("Total execution time of %d frames: %.3f ms\n", ITERATIONS, mean * ITERATIONS);
