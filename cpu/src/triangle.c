@@ -17,6 +17,10 @@ void triangle_init(triangle_t* t, const vec_t* a, const vec_t* b, const vec_t* c
     vec_normalize(&t->norm[0]);
     t->norm[1] = vec_cross(&e2, &e1);
     vec_normalize(&t->norm[1]);
+
+    t->centroid[0] = (t->coords[0].x + t->coords[1].x + t->coords[2].x) / 3.0f;
+    t->centroid[1] = (t->coords[0].y + t->coords[1].y + t->coords[2].y) / 3.0f;
+    t->centroid[2] = (t->coords[0].z + t->coords[1].z + t->coords[2].z) / 3.0f;
 }
 
 static char** load_strings(const char* filename, int* lineCount) {

@@ -10,10 +10,9 @@
 
 #include "bmp_writer.h"
 #include "cam.h"
-#include "sphere.h"
 #include "triangle.h"
 #include "light.h"
-#include "raytacer.h"
+#include "raytracer.h"
 #include "vec.h"
 #include "bvh.h"
 
@@ -21,10 +20,10 @@
 #    define M_PI 3.14159265358979323846
 #endif
 
-#define WIDTH 320
-#define HEIGHT 180
+#define WIDTH (1920)
+#define HEIGHT (1080)
 #define ITERATIONS 1
-#define NUM_THREADS 12
+#define NUM_THREADS 16
 
 const int BOUNCES = 1;
 const float EPSILON = 1e-3;
@@ -37,9 +36,6 @@ typedef struct {
 void* thread_render(void* arg);
 
 cam_t cam;
-
-size_t spheres_len;
-sphere_t* spheres;
 
 size_t triangles_len;
 triangle_t* triangles;
@@ -85,9 +81,8 @@ int main() {
     printf("Loading scene...\n");
 
     // Load resources once
-    spheres = sphere_load("data/spheres.obj", &spheres_len);
-    triangles = triangles_load("data/triangles.obj", "data/triangles.mtl", &triangles_len);
-    lights = lights_load("data/lights.obj", &lights_len);
+    triangles = triangles_load("car/triangles.obj", "car/triangles.mtl", &triangles_len);
+    lights = lights_load("car/lights.obj", &lights_len);
 
 
     printf("Building BVH...\n");
@@ -95,7 +90,6 @@ int main() {
 
     printf("\n# Scene complexity #\n");
     printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
-    printf("Number of spheres: %zu\n", spheres_len);
     printf("Number of triangles: %zu\n", triangles_len);
     printf("Number of lights: %zu\n", lights_len);
     printf("Number of ray bounces: %d\n", BOUNCES);
@@ -129,7 +123,6 @@ int main() {
     fclose(fptr);
     free(img);
 
-    free(spheres);
     free(triangles);
     free(lights);
 

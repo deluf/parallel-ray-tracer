@@ -22,6 +22,9 @@ unsafe:
 debug:
 	$(CC) -g -Iinclude -Ofast -march=native -flto src/*.c -o raytracer.exe -lm
 
+stock:
+	$(CC) src/*.c -Iinclude -o raytracer.exe -lm
+
 clean:
 	rm -f raytracer.exe
 	rm -f render.bmp

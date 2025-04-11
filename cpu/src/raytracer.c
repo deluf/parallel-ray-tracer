@@ -1,15 +1,10 @@
-#include "raytacer.h"
+#include "raytracer.h"
 #include "triangle.h"
-#include "sphere.h"
 #include "light.h"
 #include "bvh.h"
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
-
-
-extern size_t spheres_len;
-extern sphere_t* spheres;
 
 extern size_t triangles_len;
 extern triangle_t* triangles;
@@ -18,6 +13,8 @@ extern size_t lights_len;
 extern light_t* lights;
 
 extern vec_t amb_light;
+
+extern bvh_t* bvh;
 
 extern const int BOUNCES;
 extern const float EPSILON;
@@ -69,24 +66,6 @@ float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, 
     return -1;
 }
 
-static float hit_sphere(const vec_t* origin, const vec_t* dir, const sphere_t* sphere){
-    float a = dir->x*dir->x + dir->y*dir->y + dir->z*dir->z;
-    const vec_t* pos = &sphere->pos; 
-    float b = -2*( dir->x*(pos->x-origin->x) + dir->y*(pos->y-origin->y) + dir->z*(pos->z-origin->z) );
-    float c = (pos->x-origin->x)*(pos->x-origin->x) + (pos->y-origin->y)*(pos->y-origin->y) + (pos->z-origin->z)*(pos->z-origin->z) - sphere->r*sphere->r;    
-    float delta = b*b-4*a*c;
-    if(delta < 0)
-      return -1; 
-    float t1 = (-b + sqrtf(delta))/(2* a);
-    float t2 = (-b - sqrtf(delta))/(2* a);
-    float min_t = fminf(t1, t2);
-    float max_t = fmaxf(t1, t2);
-    if(min_t <= 0)
-      return max_t;
-    else
-      return min_t;
-}
-
 // light visibility - check if the ligh reach the points or is blocked by a sphere or traingle
 static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const vec_t* light){
     vec_t tmp = vec_sub(origin, light);
@@ -94,18 +73,21 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
     float light_dist2 = vec_dot(&tmp, &tmp);
     if(vec_dot(&tmp2, n) < 0)
         return 0;
-    //check nearest sphere
-    for(int i = 0; i < spheres_len; i++){
-        float t = hit_sphere(origin, dir, &spheres[i]);
-        if(t > EPSILON){
-            vec_t dir_scaled = vec_mul(dir, t);
-            vec_t intersection = vec_add(origin, &dir_scaled);
-            vec_t o_minus_i = vec_sub(origin, &intersection);
-            if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i) )
-                return 0;
-        }
-    }
     //check nearest triangle
+    int dummy;
+    int index = -1;
+    float t = FLT_MAX;
+    bvh_traverse(bvh, origin, dir, &dummy, &t, &index);
+    if(index != -1){
+        vec_t dir_scaled = vec_mul(dir, t);
+        vec_t intersection = vec_add(origin, &dir_scaled);
+        vec_t o_minus_i = vec_sub(origin, &intersection);
+        if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i) )
+            return 0;
+    }
+    return 1;
+
+    /*
     for(int i = 0; i < triangles_len; i++){
         int dummy;
         float t = hit_triangle(origin, dir, &triangles[i], &dummy);
@@ -118,6 +100,7 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
         }
     }
     return 1;
+    */
 }
 
 vec_t raytrace(vec_t origin, vec_t dir, int iter){
@@ -128,43 +111,16 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
     
     int index = -1;
     float dist = FLT_MAX;
-    float t = -1;
-    int type = 0;
+    float t = FLT_MAX;
     int norm_dir = 0;
-    //check nearest sphere
-    for(int i = 0; i < spheres_len; i++){
-        float t_tmp = hit_sphere(&origin, &dir, &spheres[i]);
-        if(t_tmp > EPSILON){
-            vec_t dir_scaled = vec_mul(&dir, t_tmp);
-            vec_t intersection = vec_add(&origin, &dir_scaled);
-            float d = vec_dist(&origin, &intersection);
-            if(d < dist){
-                index = i;
-                dist = d;
-                t = t_tmp;
-                type = 0;
-            }
-        }
-    }
     //check nearest triangle
-    /*
-    float t_tmp = FLT_MAX;
-    int norm_tmp;
-    int tri_idx;
-    bvh_intersect(&origin, &dir, &t_tmp, &norm_tmp, &tri_idx, 0);
-    if(t_tmp != FLT_MAX && t_tmp < t){
-        vec_t dir_scaled = vec_mul(&dir, t_tmp);
+    bvh_traverse(bvh, &origin, &dir, &norm_dir, &t, &index);
+    if(index != -1){
+        vec_t dir_scaled = vec_mul(&dir, t);
         vec_t intersection = vec_add(&origin, &dir_scaled);
-        float d = vec_dist(&origin, &intersection);
-        if(d < dist){
-            index = tri_idx;
-            dist = d;
-            t = t_tmp;
-            type = 1;
-            norm_dir = norm_tmp;
-        }
+        dist = vec_dist(&origin, &intersection);
     }
-    */
+    /*
     for(int i = 0; i < triangles_len; i++){
         int norm_tmp;
         float t_tmp = hit_triangle(&origin, &dir, &triangles[i], &norm_tmp);
@@ -176,17 +132,13 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
                 index = i;
                 dist = d;
                 t = t_tmp;
-                type = 1;
                 norm_dir = norm_tmp;
             }
         }
     }
+    */
     
-    //INDEX | T | TYPE
-    //TYPE = 0 : SPHERE
-    //TYPE = 1 : TRIANGLE
-    
-    if(index < 0){
+    if(index == -1){
         col.r = amb_light.r;
         col.g = amb_light.g;
         col.b = amb_light.b;
@@ -198,19 +150,10 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
         vec_t kd;
         vec_t kr;
         vec_t n;
-        if(type == 0){
-            ks = spheres[index].ks;
-            kd = spheres[index].kd;
-            kr = spheres[index].kr;
-            n = vec_sub(&intersection, &spheres[index].pos);
-            vec_normalize(&n);
-        }
-        if(type == 1){
-            ks = triangles[index].ks;
-            kd = triangles[index].kd;
-            kr = triangles[index].kr;
-            n = triangles[index].norm[norm_dir];
-        }
+        ks = triangles[index].ks;
+        kd = triangles[index].kd;
+        kr = triangles[index].kr;
+        n = triangles[index].norm[norm_dir];
         //apply ambient light
         col.r = kd.r*amb_light.r;
         col.g = kd.g*amb_light.g;
