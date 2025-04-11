@@ -2,6 +2,8 @@
 #include "triangle.h"
 #include "light.h"
 #include "bvh.h"
+#include "options.h"
+
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
@@ -16,7 +18,6 @@ extern vec_t amb_light;
 
 extern bvh_t* bvh;
 
-extern const int BOUNCES;
 extern const float EPSILON;
 
 static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, const vec_t* l, const vec_t* v, float dot){
@@ -77,6 +78,7 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
     int dummy;
     int index = -1;
     float t = FLT_MAX;
+    #if USE_BVH == 1
     bvh_traverse(bvh, origin, dir, &dummy, &t, &index);
     if(index != -1){
         vec_t dir_scaled = vec_mul(dir, t);
@@ -85,9 +87,7 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
         if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i) )
             return 0;
     }
-    return 1;
-
-    /*
+    #else
     for(int i = 0; i < triangles_len; i++){
         int dummy;
         float t = hit_triangle(origin, dir, &triangles[i], &dummy);
@@ -99,8 +99,8 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
                 return 0;
         }
     }
+    #endif
     return 1;
-    */
 }
 
 vec_t raytrace(vec_t origin, vec_t dir, int iter){
@@ -114,13 +114,14 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
     float t = FLT_MAX;
     int norm_dir = 0;
     //check nearest triangle
+    #if USE_BVH == 1
     bvh_traverse(bvh, &origin, &dir, &norm_dir, &t, &index);
     if(index != -1){
         vec_t dir_scaled = vec_mul(&dir, t);
         vec_t intersection = vec_add(&origin, &dir_scaled);
         dist = vec_dist(&origin, &intersection);
     }
-    /*
+    #else
     for(int i = 0; i < triangles_len; i++){
         int norm_tmp;
         float t_tmp = hit_triangle(&origin, &dir, &triangles[i], &norm_tmp);
@@ -136,7 +137,7 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
             }
         }
     }
-    */
+    #endif
     
     if(index == -1){
         col.r = amb_light.r;

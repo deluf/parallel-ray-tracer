@@ -1,6 +1,8 @@
 #include "bvh.h"
 #include "raytracer.h"
+#include "options.h"
 
+#include <time.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,9 +11,6 @@
 
 extern triangle_t* triangles;
 
-#define BVH_DEPTH_MAX 16
-
-int* triangles_idx;
 bvh_t* bvh;
 int bvh_len;
 
@@ -22,14 +21,14 @@ static vec_t aabb_center(aabb_t* aabb){
     return vec_mul(&tmp, 0.5f);
 }
 
-static bool aabb_intersect(const aabb_t* aabb, const vec_t* origin, const vec_t* dir){
+static bool aabb_intersect(const aabb_t* aabb, const vec_t* origin, const vec_t* dir, float t){
     float tx1 = (aabb->min.x - origin->x) / dir->x, tx2 = (aabb->max.x - origin->x) / dir->x;
 	float tmin = fminf( tx1, tx2 ), tmax = fmaxf( tx1, tx2 );
 	float ty1 = (aabb->min.y - origin->y) / dir->y, ty2 = (aabb->max.y - origin->y) / dir->y;
 	tmin = fmaxf( tmin, fminf( ty1, ty2 ) ), tmax = fminf( tmax, fmaxf( ty1, ty2 ) );
 	float tz1 = (aabb->min.z - origin->z) / dir->z, tz2 = (aabb->max.z - origin->z) / dir->z;
 	tmin = fmaxf( tmin, fminf( tz1, tz2 ) ), tmax = fminf( tmax, fmaxf( tz1, tz2 ) );
-	return tmax >= tmin && tmax > 0;
+	return tmax >= tmin && tmin < t && tmax > 0;
 }
 
 static void aabb_grow_pt(aabb_t* aabb, const vec_t* point){
@@ -51,17 +50,42 @@ static void bvh_add_tr(bvh_t* bvh, int t_idx){
     bvh->ts[bvh->ts_len - 1] = t_idx;
 }
 
-static void bvh_split(bvh_t* parent, int depth){
-    if(depth == BVH_DEPTH_MAX) return;
+int min_l = INT_MAX;
+int max_l = INT_MIN;
+int sum_l = 0;
+int count_l = 0;
 
-    if(!parent->ts_len) return;
+static void bvh_split(bvh_t* parent, int depth){
+    if(depth == BVH_MAX_ITER || parent->ts_len <= BVH_ELEMENT_THRESHOLD) {
+        #if BVH_METRICS == 1
+        sum_l += parent->ts_len;
+        count_l += 1;
+        if(parent->ts_len < min_l)
+            min_l = parent->ts_len;
+        if(parent->ts_len > max_l)
+            max_l = parent->ts_len;
+        #endif
+        return;
+    }
 
     vec_t center = aabb_center(&parent->aabb);
     vec_t size = vec_sub(&parent->aabb.max, &parent->aabb.min);
+    #if BVH_HEURISTIC == 0
     int splitAxis = 0;
-    if(size.y > size.x) splitAxis = 1;
-    if(size.z > size.arr[splitAxis]) splitAxis = 2;
     float splitPos = center.arr[splitAxis];
+    #elif BVH_HEURISTIC == 1
+    int splitAxis = 1;
+    if(size.y > size.x) splitAxis = 1;
+    if(size.z > size.x && size.z > size.y) splitAxis = 2;
+    float splitPos = center.arr[splitAxis];
+    #elif BVH_HEURISTIC == 2
+    int splitAxis = rand() % 4;
+    float splitPos = center.arr[splitAxis];
+    #elif BVH_HEURISTIC == 3
+    int splitAxis = rand() % 4;
+    float splitPos = center.arr[splitAxis];
+    splitPos += ((float)rand()/RAND_MAX - 0.5f) * (size.arr[splitAxis]);
+    #endif
 
     parent->left = (bvh_t*)malloc(sizeof(bvh_t));
     parent->right = (bvh_t*)malloc(sizeof(bvh_t));
@@ -85,7 +109,7 @@ static void bvh_split(bvh_t* parent, int depth){
 }
 
 void bvh_traverse(bvh_t* node, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx){
-    bool hit = aabb_intersect(&node->aabb, origin, dir);
+    bool hit = aabb_intersect(&node->aabb, origin, dir, *t);
     if(hit){
         if(!node->left && !node->right){
             for(int i = 0; i < node->ts_len; i++){
@@ -106,41 +130,9 @@ void bvh_traverse(bvh_t* node, const vec_t* origin, const vec_t* dir, int* norm_
     }
 }
 
-int numDigits(int num) {
-    int digits = 0;
-    if (num == 0) return 1;
-    while (num) {
-        digits++;
-        num /= 10;
-    }
-    return digits;
-}
-
-void printTree(bvh_t* root, int space) {
-    if (root == NULL)
-        return;
-
-    int gap = 6;
-
-    // Increase space between levels
-    space += gap;
-
-    // Right subtree
-    printTree(root->right, space);
-
-    // Print current node after spaces
-    printf("\n");
-    for (int i = gap; i < space - numDigits(root->ts_len); i++)
-        printf(" ");
-    printf("%d\n", root->ts_len);
-
-    // Left subtree
-    printTree(root->left, space);
-}
-
-
-
 void bvh_build(triangle_t* triangles, size_t triangles_len){
+    srand(time(NULL));
+
     bvh = (bvh_t*)malloc(sizeof(bvh_t));
     memset(bvh, 0, sizeof(bvh_t));
     bvh->aabb.min = (vec_t){1e10f, 1e10f, 1e10f};
@@ -150,5 +142,10 @@ void bvh_build(triangle_t* triangles, size_t triangles_len){
 
     bvh_split(bvh, 0);
 
-    //printTree(bvh, 0);
+    #if BVH_METRICS == 1
+    printf("min number of triangle: %d\n", min_l);
+    printf("max number of triangle: %d\n", max_l);
+    printf("avg number of triangle: %.2f\n", (float)sum_l/count_l);
+    printf("number of leaf: %d\n", count_l);
+    #endif
 }

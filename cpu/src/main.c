@@ -15,17 +15,12 @@
 #include "raytracer.h"
 #include "vec.h"
 #include "bvh.h"
+#include "options.h"
 
 #ifndef M_PI
 #    define M_PI 3.14159265358979323846
 #endif
 
-#define WIDTH (1920)
-#define HEIGHT (1080)
-#define ITERATIONS 1
-#define NUM_THREADS 16
-
-const int BOUNCES = 1;
 const float EPSILON = 1e-3;
 
 typedef struct {
@@ -43,7 +38,7 @@ triangle_t* triangles;
 size_t lights_len;
 light_t* lights;
 
-vec_t amb_light = {.r = 0.1, .g = 0.1, .b = 0.1};
+vec_t amb_light = {.r = 0.5, .g = 0.5, .b = 0.5};
 
 vec_t pixels[WIDTH*HEIGHT];
 
@@ -81,12 +76,13 @@ int main() {
     printf("Loading scene...\n");
 
     // Load resources once
-    triangles = triangles_load("car/triangles.obj", "car/triangles.mtl", &triangles_len);
-    lights = lights_load("car/lights.obj", &lights_len);
+    triangles = triangles_load("data/triangles.obj", "data/triangles.mtl", &triangles_len);
+    lights = lights_load("data/lights.obj", &lights_len);
 
-
+    #if USE_BVH == 1
     printf("Building BVH...\n");
     bvh_build(triangles, triangles_len);
+    #endif
 
     printf("\n# Scene complexity #\n");
     printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
