@@ -21,8 +21,6 @@
 #    define M_PI 3.14159265358979323846
 #endif
 
-const float EPSILON = 1e-3;
-
 typedef struct {
     int from_idx;
     int to_idx;
@@ -76,12 +74,24 @@ int main() {
     printf("Loading scene...\n");
 
     // Load resources once
-    triangles = triangles_load("data/triangles.obj", "data/triangles.mtl", &triangles_len);
-    lights = lights_load("data/lights.obj", &lights_len);
+    triangles = triangles_load(SCENE "/triangles.obj", SCENE "/triangles.mtl", &triangles_len);
+    lights = lights_load(SCENE "/lights.obj", &lights_len);
 
     #if USE_BVH == 1
     printf("Building BVH...\n");
+    struct timespec start, finish;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
     bvh_build(triangles, triangles_len);
+
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+
+    double elapsed = (finish.tv_sec - start.tv_sec);
+    elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+
+    float time = elapsed * 1000; // Convert to milliseconds
+
+    printf("bvh built in %.3f ms\n", time);
     #endif
 
     printf("\n# Scene complexity #\n");

@@ -16,9 +16,7 @@ extern light_t* lights;
 
 extern vec_t amb_light;
 
-extern bvh_t* bvh;
-
-extern const float EPSILON;
+const float EPSILON = 1e-3;
 
 static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, const vec_t* l, const vec_t* v, float dot){
     vec_t h = vec_add(l, v);
@@ -79,7 +77,7 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
     int index = -1;
     float t = FLT_MAX;
     #if USE_BVH == 1
-    bvh_traverse(bvh, origin, dir, &dummy, &t, &index);
+    bvh_traverse(0, origin, dir, &dummy, &t, &index);
     if(index != -1){
         vec_t dir_scaled = vec_mul(dir, t);
         vec_t intersection = vec_add(origin, &dir_scaled);
@@ -115,7 +113,7 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
     int norm_dir = 0;
     //check nearest triangle
     #if USE_BVH == 1
-    bvh_traverse(bvh, &origin, &dir, &norm_dir, &t, &index);
+    bvh_traverse(0, &origin, &dir, &norm_dir, &t, &index);
     if(index != -1){
         vec_t dir_scaled = vec_mul(&dir, t);
         vec_t intersection = vec_add(&origin, &dir_scaled);
