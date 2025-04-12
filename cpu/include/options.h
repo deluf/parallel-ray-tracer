@@ -2,8 +2,8 @@
 
 #define SCENE "data"
 
-#define WIDTH 1920
-#define HEIGHT 1080
+#define WIDTH (1920)
+#define HEIGHT (1080)
 
 /* number of image to be rendered */
 #define ITERATIONS 1

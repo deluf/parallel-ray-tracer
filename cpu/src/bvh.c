@@ -79,13 +79,13 @@ static void bvh_split(int node_idx, int depth){
     right->aabb.min = (vec_t){1e10f, 1e10f, 1e10f};
     right->aabb.max = (vec_t){-1e10f, -1e10f, -1e10f};
 
+    int splitAxis;
+    float splitPos;
     vec_t center = aabb_center(&parent->aabb);
     vec_t size = vec_sub(&parent->aabb.max, &parent->aabb.min);
 
     bool intersectA = false;
     bool intersectB = false;
-    int splitAxis;
-    float splitPos;
     while(!intersectA || !intersectB){
         intersectA = false;
         intersectB = false;
@@ -94,7 +94,7 @@ static void bvh_split(int node_idx, int depth){
         splitPos = center.arr[splitAxis];
         break;
         #elif BVH_HEURISTIC == 1
-        splitAxis = 1;
+        splitAxis = 0;
         if(size.y > size.x) splitAxis = 1;
         if(size.z > size.x && size.z > size.y) splitAxis = 2;
         splitPos = center.arr[splitAxis];
@@ -107,7 +107,6 @@ static void bvh_split(int node_idx, int depth){
         splitAxis = rand() % 4;
         splitPos = center.arr[splitAxis];
         splitPos += ((float)rand()/RAND_MAX - 0.5f) * (size.arr[splitAxis]);
-        #endif
 
         for(int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len && (!intersectA || !intersectB); i++){
             int t_idx = tri_idx[i];
@@ -116,6 +115,7 @@ static void bvh_split(int node_idx, int depth){
             intersectA |= inA;
             intersectB |= !inA;
         }
+        #endif
     }
 
     for(int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len; i++){
