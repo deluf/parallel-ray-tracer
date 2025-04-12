@@ -10,6 +10,9 @@
 
 #define NUM_THREADS 16
 
+/* each thread get not rendered tile of this size */
+#define TILE_SIZE 1024
+
 /* number of bounces per ray */
 #define BOUNCES 4
 
