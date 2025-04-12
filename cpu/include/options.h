@@ -26,7 +26,7 @@ Reference (16:9):
 
 #define NUM_THREADS 12
 
-/* each thread get not rendered tile of this size */
+/* each thread renders tiles of this size */
 #define TILE_SIZE 1024
 
 /* number of bounces per ray */
