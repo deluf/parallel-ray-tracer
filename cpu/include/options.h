@@ -32,3 +32,5 @@
 
 /* raytracer */
 #define USE_BVH 1
+
+#define USE_BVH_FAST_LIGHT 1

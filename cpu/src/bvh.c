@@ -142,6 +142,34 @@ static void bvh_split(int node_idx, int depth){
     bvh_split(parent->child + 1, depth + 1);
 }
 
+bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, float* t, float light_dist2){
+    bvh_t* node = &bvh[node_idx];
+    bool hit = aabb_intersect(&node->aabb, origin, dir, *t);
+    if(hit){
+        if(node->tr_len){
+            for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++){
+                int norm_tmp;
+                int idx_tmp = tri_idx[i];
+                triangle_t* tr = &triangles[idx_tmp];
+                float t_tmp = hit_triangle(origin, dir, tr, &norm_tmp);
+                if(t_tmp < *t){
+                    *t = t_tmp;
+                    vec_t dir_scaled = vec_mul(dir, *t);
+                    vec_t intersection = vec_add(origin, &dir_scaled);
+                    vec_t o_minus_i = vec_sub(origin, &intersection);
+                    if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i))
+                        return false;
+                }
+            }
+        } else if(node->child) {
+            bvh_light_traverse(node->child, origin, dir, t, light_dist2);
+            bvh_light_traverse(node->child + 1, origin, dir, t, light_dist2);
+        }
+    }
+
+    return true;
+}
+
 void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx){
     bvh_t* node = &bvh[node_idx];
     bool hit = aabb_intersect(&node->aabb, origin, dir, *t);

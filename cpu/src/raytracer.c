@@ -77,14 +77,18 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
     int index = -1;
     float t = FLT_MAX;
     #if USE_BVH == 1
-    bvh_traverse(0, origin, dir, &dummy, &t, &index);
-    if(index != -1){
-        vec_t dir_scaled = vec_mul(dir, t);
-        vec_t intersection = vec_add(origin, &dir_scaled);
-        vec_t o_minus_i = vec_sub(origin, &intersection);
-        if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i) )
-            return 0;
-    }
+        #if USE_BVH_FAST_LIGHT == 1
+        return bvh_light_traverse(0, origin, dir, &t, light_dist2);
+        #else    
+        bvh_traverse(0, origin, dir, &dummy, &t, &index);
+        if(index != -1){
+            vec_t dir_scaled = vec_mul(dir, t);
+            vec_t intersection = vec_add(origin, &dir_scaled);
+            vec_t o_minus_i = vec_sub(origin, &intersection);
+            if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i) )
+                return 0;
+        }
+        #endif
     #else
     for(int i = 0; i < triangles_len; i++){
         int dummy;

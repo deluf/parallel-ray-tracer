@@ -23,6 +23,7 @@ typedef struct bvh_t {
 } bvh_t;
 
 void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx);
+bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, float* t, float light_dist2);
 void bvh_build(triangle_t* triangles, size_t triangles_len);
 
 #endif
