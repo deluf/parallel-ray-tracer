@@ -44,7 +44,7 @@ float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, 
     volatile float u = vec_dot(&e2, &dao)*invdet;
     volatile float v = -vec_dot(&e1, &dao)*invdet;
     volatile float t = vec_dot(&ao, &n)*invdet;
-    if(det > 0 && t > 0 && u > 0 && v > 0 && (u+v) < 1){
+    if(det > 0 && t > EPSILON && u > 0 && v > 0 && (u+v) < 1){
         return t;  
     }
 
@@ -59,10 +59,10 @@ float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, 
     u = vec_dot(&e2, &dao)*invdet;
     v = -vec_dot(&e1, &dao)*invdet;
     t = vec_dot(&ao, &n)*invdet;
-    if(det > 0 && t > 0 && u > 0 && v > 0 && (u+v) < 1)
+    if(det > 0 && t > EPSILON && u > 0 && v > 0 && (u+v) < 1)
       return t;  
   
-    return -1;
+    return FLT_MAX;
 }
 
 // light visibility - check if the ligh reach the points or is blocked by a sphere or traingle

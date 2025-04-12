@@ -152,7 +152,7 @@ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm
                 int idx_tmp = tri_idx[i];
                 triangle_t* tr = &triangles[idx_tmp];
                 float t_tmp = hit_triangle(origin, dir, tr, &norm_tmp);
-                if(t_tmp > EPSILON && t_tmp < *t){
+                if(t_tmp < *t){
                     *t = t_tmp;
                     *norm_dir = norm_tmp;
                     *t_idx = idx_tmp;
