@@ -68,7 +68,7 @@ double compute_ci(double mean, double stddev, int count) {
 }
 
 int main() {
-    cam_init(&cam, &(vec_t){0, -10, 3}, M_PI/3.2);
+    cam_init(&cam, &(vec_t){0, -9, 3}, M_PI/3.2);
     cam.rot.x = -M_PI/12;
 
     printf("Loading scene...\n");
