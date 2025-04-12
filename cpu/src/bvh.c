@@ -18,7 +18,23 @@ int bvh_len = 1;
 
 extern const float EPSILON;
 
-static vec_t aabb_center(aabb_t* aabb){
+#define GEN_SORT(x) int sort_ ## x (const void *a, const void *b) { \
+    int idx1 = *(int*)a; \
+    int idx2 = *(int*)b; \
+    float diff = triangles[idx1].centroid[x] - triangles[idx2].centroid[x]; \
+    if(diff < 0.0f) return -1; \
+    if(diff > 0.0f) return +1; \
+    return 0; \
+}
+
+GEN_SORT(0)
+GEN_SORT(1)
+GEN_SORT(2)
+
+typedef int (*sort_func)(const void *, const void *);
+sort_func sort_algs[3] = {sort_0, sort_1, sort_2};
+
+static vec_t aabb_center(const aabb_t* aabb){
     vec_t tmp = vec_add(&aabb->min, &aabb->max);
     return vec_mul(&tmp, 0.5f);
 }
@@ -84,6 +100,58 @@ static void bvh_split(int node_idx, int depth){
     vec_t center = aabb_center(&parent->aabb);
     vec_t size = vec_sub(&parent->aabb.max, &parent->aabb.min);
 
+    #if BVH_HEURISTIC == 5
+    aabb_t aabb_l;
+    aabb_t aabb_r;
+    splitAxis = 0;
+    float max_score = FLT_MIN;
+    for(int i = 0; i < 3; i++){
+        aabb_l.max = aabb_r.max = (vec_t){FLT_MIN, FLT_MIN, FLT_MIN};
+        aabb_l.min = aabb_r.min = (vec_t){FLT_MAX, FLT_MAX, FLT_MAX};
+        qsort(tri_idx + parent->tr_idx, parent->tr_len, sizeof(int), sort_algs[i]);
+        for(int j = parent->tr_idx; j < parent->tr_idx + parent->tr_len; j++){
+            int t_idx = tri_idx[j];
+            triangle_t* t = &triangles[t_idx];
+            bool inA = j < parent->tr_idx + (parent->tr_len / 2);
+            aabb_grow_tr(inA ? &aabb_l : &aabb_r, t_idx);
+        }
+        vec_t l_center = aabb_center(&aabb_l);
+        vec_t r_center = aabb_center(&aabb_r);
+        float score = vec_dist(&l_center, &r_center);
+        if(score > max_score){
+            splitAxis = i;
+            max_score = score;
+        }
+    }
+    #endif
+
+    #if BVH_HEURISTIC == 4
+    splitAxis = 0;
+    if(size.y > size.x) splitAxis = 1;
+    if(size.z > size.x && size.z > size.y) splitAxis = 2;
+    splitPos = center.arr[splitAxis];
+    #endif
+
+    #if (BVH_HEURISTIC == 4) || (BVH_HEURISTIC == 5)
+    qsort(tri_idx + parent->tr_idx, parent->tr_len, sizeof(int), sort_algs[splitAxis]);
+
+    for(int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len; i++){
+        int t_idx = tri_idx[i];
+        triangle_t* t = &triangles[t_idx];
+        bool inA = i < parent->tr_idx + (parent->tr_len / 2);
+        bvh_t* child = inA ? left : right;
+        aabb_grow_tr(&child->aabb, t_idx);
+        child->tr_len += 1;
+
+        if(inA){
+            int swap = left->tr_idx + left->tr_len - 1;
+            int tmp = tri_idx[i];
+            tri_idx[i] = tri_idx[swap];
+            tri_idx[swap] = tmp;
+            right->tr_idx += 1;
+        }
+    }
+    #else
     bool intersectA = false;
     bool intersectB = false;
     while(!intersectA || !intersectB){
@@ -134,6 +202,7 @@ static void bvh_split(int node_idx, int depth){
             right->tr_idx += 1;
         }
     }
+    #endif
 
     parent->child = child_idx;
     parent->tr_len = 0;
