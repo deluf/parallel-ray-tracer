@@ -2,8 +2,8 @@
 
 #define SCENE "data"
 
-#define WIDTH (320)
-#define HEIGHT (240)
+#define WIDTH (1920)
+#define HEIGHT (1080)
 
 /* number of image to be rendered */
 #define ITERATIONS 1
@@ -11,14 +11,14 @@
 #define NUM_THREADS 16
 
 /* number of bounces per ray */
-#define BOUNCES 1
+#define BOUNCES 4
 
 /* bvh option */
 
 /* max depth of bvh */
-#define BVH_MAX_ITER 32
+#define BVH_MAX_ITER -1
 /* bvh recursion is stopped if the parent contains less than BVH_ELEMENT_THRESHOLD */
-#define BVH_ELEMENT_THRESHOLD 10
+#define BVH_ELEMENT_THRESHOLD 2
 /* 
     0: always axis 0
     1: axis with largest size
