@@ -22,12 +22,12 @@ Reference (16:9):
 */
 
 /* number of frames to be rendered */
-#define ITERATIONS 1
+#define ITERATIONS 10
 
-#define NUM_THREADS 12
+#define NUM_THREADS 16
 
 /* each thread renders tiles of this size */
-#define TILE_SIZE 1024
+#define TILE_SIZE 2048
 
 /* number of bounces per ray */
 #define BOUNCES 4

@@ -156,6 +156,9 @@ void render_frame(){
     for(int i = 0; i < NUM_THREADS; i++) {
         pthread_join(threads[i], NULL);
     }
+
+    //reset pixel counter
+    pixel_counter = 0;
 }
 
 vec_t render_pixel(const vec_t* start, const vec_t* inc_x, const vec_t* inc_y, int x, int y){
