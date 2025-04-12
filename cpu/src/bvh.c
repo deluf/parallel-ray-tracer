@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <float.h>
+#include <limits.h>
 
 extern triangle_t* triangles;
 extern size_t triangles_len;
@@ -263,8 +264,12 @@ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm
 }
 
 void bvh_build(triangle_t* triangles, size_t triangles_len){
+    #if SEED == 0
     srand(time(NULL));
-    
+    #else
+    srand(SEED);
+    #endif
+
     if(!triangles_len){
         printf("no triangles, cannot build bvh.\n");
         exit(EXIT_FAILURE);
@@ -290,6 +295,6 @@ void bvh_build(triangle_t* triangles, size_t triangles_len){
     printf("max number of triangle: %d\n", max_l);
     printf("avg number of triangle: %.2f\n", (float)sum_l/count_l);
     printf("number of leaf: %d\n", count_l);
-    printf("bvh size (bytes): %d\n", sizeof(bvh_t)*bvh_len);
+    printf("bvh size (bytes): %lu\n", sizeof(bvh_t)*bvh_len);
     #endif
 }

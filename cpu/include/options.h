@@ -1,14 +1,30 @@
 /* scene options */
 
-#define SCENE "data"
+#define SCENE "car_boxed"
+/*
+    car_only
+    car_boxed
+*/
 
 #define WIDTH (1920)
 #define HEIGHT (1080)
+/*
+Reference (16:9):
+    144p:   256 x 144
+    240p:   426 x 240
+    360p:   640 x 360
+    480p:   854 x 480
+    720p:   1280 x 720
+    1080p:  1920 x 1080
+    2k:     2560 x 1440
+    4k:     3840 x 2160
+    8k:     7680 x 4320
+*/
 
-/* number of image to be rendered */
+/* number of frames to be rendered */
 #define ITERATIONS 1
 
-#define NUM_THREADS 16
+#define NUM_THREADS 12
 
 /* number of bounces per ray */
 #define BOUNCES 4
@@ -30,6 +46,13 @@
     option 3 should be the fastest
 */
 #define BVH_HEURISTIC 3
+
+/* BVH random split seed: only valid if either option 2 or 3 above are used */
+#define SEED 1
+/*
+    0: seed based on time (time(NULL)) -> Useful for random tests
+    1: fixed seed (BVH is always the same) -> Useful to do proper benchmarks
+*/
 
 /* print bvh metrics */
 #define BVH_METRICS 1

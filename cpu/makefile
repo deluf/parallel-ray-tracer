@@ -17,13 +17,10 @@ optimize:
 	$(CC) -Iinclude -O3 -flto src/*.c -o raytracer.exe -lm
 
 unsafe:
+	$(CC) -Iinclude -O3 -ffast-math -march=native -flto src/*.c -o raytracer.exe -lm
+
+fast:
 	$(CC) -Iinclude -Ofast -march=native -flto src/*.c -o raytracer.exe -lm
-
-debug:
-	$(CC) -g -Iinclude -Ofast -march=native -flto src/*.c -o raytracer.exe -lm
-
-stock:
-	$(CC) src/*.c -Iinclude -o raytracer.exe -lm
 
 clean:
 	rm -f raytracer.exe
