@@ -53,7 +53,7 @@ Reference (16:9):
 #define BVH_HEURISTIC 3
 
 /* BVH random split seed: only valid if either option 2 or 3 above are used */
-#define SEED 0
+#define SEED 1
 /*
     0: seed based on time (time(NULL)) -> Useful for random tests
     1: fixed seed (BVH is always the same) -> Useful to do proper benchmarks
