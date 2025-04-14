@@ -35,7 +35,7 @@ Reference (16:9):
 /* bvh option */
 
 /* max depth of bvh */
-#define BVH_MAX_ITER -1
+#define BVH_MAX_ITER 32
 
 /* bvh recursion is stopped if the parent contains less than BVH_ELEMENT_THRESHOLD */
 #define BVH_ELEMENT_THRESHOLD 2
@@ -46,11 +46,15 @@ Reference (16:9):
     2: in the middle of a random axis
     3: in a random position of a random axis
     4: median split on the largest axis
-    5: median split on axis based on a distance AABB score
+    5: median split on axis based on SAH score
+    6: all possible splits based on SAH score
 
     option 3 should be the fastest
 */
-#define BVH_HEURISTIC 3
+#define BVH_HEURISTIC 6
+
+/* define the size of the bin to use for heuristic 6. If -1 is specified a brute force approach will be used */
+#define SAH_BIN_SIZE 16
 
 /* BVH random split seed: only valid if either option 2 or 3 above are used */
 #define SEED 1

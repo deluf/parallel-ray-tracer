@@ -40,6 +40,11 @@ static vec_t aabb_center(const aabb_t* aabb){
     return vec_mul(&tmp, 0.5f);
 }
 
+static float aabb_area(const aabb_t* aabb){
+    vec_t size = vec_sub(&aabb->max, &aabb->min);
+    return vec_dot(&size, &size);
+}
+
 static float aabb_intersect(const aabb_t* aabb, const vec_t* origin, const vec_t* dir){
     float tx1 = (aabb->min.x - origin->x) / dir->x, tx2 = (aabb->max.x - origin->x) / dir->x;
 	float tmin = fminf( tx1, tx2 ), tmax = fmaxf( tx1, tx2 );
@@ -65,23 +70,27 @@ static void aabb_grow_tr(aabb_t* aabb, int t_idx){
     aabb_grow_pt(aabb, &tr->coords[2]);
 }
 
-int min_l = INT_MAX;
-int max_l = INT_MIN;
-int sum_l = 0;
-int count_l = 0;
+static int min_stats = INT_MAX;
+static int max_stats = INT_MIN;
+static int sum_stats = 0;
+static int count_stats = 0;
 
 static void bvh_split(int node_idx, int depth){
     bvh_t* parent = &bvh[node_idx];
+    if(bvh_len >= 2*triangles_len){
+        printf("BVH SPLIT: MAX SIZE REACHED\n");
+        return;
+    }
     if(depth == BVH_MAX_ITER || parent->tr_len <= BVH_ELEMENT_THRESHOLD) {
         if(!parent->tr_len)
             parent->child = 0;
         #if BVH_METRICS == 1
-        sum_l += parent->tr_len;
-        count_l += 1;
-        if(parent->tr_len < min_l)
-            min_l = parent->tr_len;
-        if(parent->tr_len > max_l)
-            max_l = parent->tr_len;
+        sum_stats += parent->tr_len;
+        count_stats += 1;
+        if(parent->tr_len < min_stats)
+            min_stats = parent->tr_len;
+        if(parent->tr_len > max_stats)
+            max_stats = parent->tr_len;
         #endif
         return;
     }
@@ -107,7 +116,7 @@ static void bvh_split(int node_idx, int depth){
     aabb_t aabb_l;
     aabb_t aabb_r;
     splitAxis = 0;
-    float max_score = FLT_MIN;
+    float best_score = FLT_MAX;
     for(int i = 0; i < 3; i++){
         aabb_l.max = aabb_r.max = (vec_t){FLT_MIN, FLT_MIN, FLT_MIN};
         aabb_l.min = aabb_r.min = (vec_t){FLT_MAX, FLT_MAX, FLT_MAX};
@@ -118,12 +127,51 @@ static void bvh_split(int node_idx, int depth){
             bool inA = j < parent->tr_idx + (parent->tr_len / 2);
             aabb_grow_tr(inA ? &aabb_l : &aabb_r, t_idx);
         }
-        vec_t l_center = aabb_center(&aabb_l);
-        vec_t r_center = aabb_center(&aabb_r);
-        float score = vec_dist(&l_center, &r_center);
-        if(score > max_score){
+        float score = (parent->tr_len/2)*aabb_area(&aabb_l) + (parent->tr_len-parent->tr_len/2)*aabb_area(&aabb_r);
+        if(score < best_score){
             splitAxis = i;
-            max_score = score;
+            best_score = score;
+        }
+    }
+    #endif
+
+    #if BVH_HEURISTIC == 6
+    splitAxis = 0;
+    splitPos = 0;
+    float best_score = FLT_MAX;
+    for(int axis = 0; axis < 3; axis++){
+        #if SAH_BIN_SIZE == -1
+        for(int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len; i++){
+        #else
+        for(int i = 0; i < SAH_BIN_SIZE; i++){
+        #endif
+            aabb_t aabb_l, aabb_r;
+            aabb_l.max = aabb_r.max = (vec_t){FLT_MIN, FLT_MIN, FLT_MIN};
+            aabb_l.min = aabb_r.min = (vec_t){FLT_MAX, FLT_MAX, FLT_MAX};
+            #if SAH_BIN_SIZE == -1
+            int t_idx = tri_idx[i];
+            triangle_t* t = &triangles[t_idx];
+            float split = t->centroid[axis];
+            #else
+            vec_t size = vec_sub(&parent->aabb.max, &parent->aabb.min);
+            float split = parent->aabb.min.arr[axis] + size.arr[axis] * ((float)i / SAH_BIN_SIZE);
+            #endif
+            int cl = 0;
+            int cr = 0;
+            for(int j = parent->tr_idx; j < parent->tr_idx + parent->tr_len; j++){
+                int t_idx = tri_idx[j];
+                triangle_t* t = &triangles[t_idx];
+                bool inA = t->centroid[axis] < split;
+                aabb_t* aabb = inA ? &aabb_l : &aabb_r;
+                aabb_grow_tr(aabb, t_idx);
+                if(inA) cl++ ; else cr++;
+            }
+            float score = cl*aabb_area(&aabb_l) + cr*aabb_area(&aabb_r);
+            if(score < best_score){
+                best_score = score;
+                splitAxis = axis;
+                splitPos = split;
+            }
         }
     }
     #endif
@@ -135,6 +183,7 @@ static void bvh_split(int node_idx, int depth){
     splitPos = center.arr[splitAxis];
     #endif
 
+    // special behavior for median split
     #if (BVH_HEURISTIC == 4) || (BVH_HEURISTIC == 5)
     qsort(tri_idx + parent->tr_idx, parent->tr_len, sizeof(int), sort_algs[splitAxis]);
 
@@ -160,7 +209,9 @@ static void bvh_split(int node_idx, int depth){
     while(!intersectA || !intersectB){
         intersectA = false;
         intersectB = false;
-        #if BVH_HEURISTIC == 0
+        #if BVH_HEURISTIC == 6
+        break;
+        #elif BVH_HEURISTIC == 0
         splitAxis = 0;
         splitPos = center.arr[splitAxis];
         break;
@@ -178,6 +229,7 @@ static void bvh_split(int node_idx, int depth){
         splitAxis = rand() % 4;
         splitPos = center.arr[splitAxis];
         splitPos += ((float)rand()/RAND_MAX - 0.5f) * (size.arr[splitAxis]);
+        
 
         for(int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len && (!intersectA || !intersectB); i++){
             int t_idx = tri_idx[i];
@@ -323,10 +375,10 @@ void bvh_build(triangle_t* triangles, size_t triangles_len){
     bvh_split(0, 0);
 
     #if BVH_METRICS == 1
-    printf("min number of triangle: %d\n", min_l);
-    printf("max number of triangle: %d\n", max_l);
-    printf("avg number of triangle: %.2f\n", (float)sum_l/count_l);
-    printf("number of leaf: %d\n", count_l);
+    printf("min number of triangle: %d\n", min_stats);
+    printf("max number of triangle: %d\n", max_stats);
+    printf("avg number of triangle: %.2f\n", (float)sum_stats/count_stats);
+    printf("number of leaf: %d\n", count_stats);
     printf("bvh size (bytes): %lu\n", sizeof(bvh_t)*bvh_len);
     #endif
 }
