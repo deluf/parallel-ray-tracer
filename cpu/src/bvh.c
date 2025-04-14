@@ -216,6 +216,8 @@ static void bvh_split(int node_idx, int depth){
 
 bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, float* t, float light_dist2){
     bvh_t* node = &bvh[node_idx];
+    bool near_v = true;
+    bool far_v = true;
     if(node->tr_len){
         for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++){
             int norm_tmp;
@@ -247,13 +249,13 @@ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, flo
             far_t = tmp_t;
         }
         if(near_t < *t){
-            bvh_light_traverse(near_idx, origin, dir, t, light_dist2);
+            near_v = bvh_light_traverse(near_idx, origin, dir, t, light_dist2);
             if(far_t < *t)
-                bvh_light_traverse(far_idx, origin, dir, t, light_dist2);
+                far_v = bvh_light_traverse(far_idx, origin, dir, t, light_dist2);
         }
     }
 
-    return true;
+    return near_v && far_v;
 }
 
 void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx){
