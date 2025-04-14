@@ -267,82 +267,92 @@ static void bvh_split(int node_idx, int depth){
 }
 
 bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, float* t, float light_dist2){
-    bvh_t* node = &bvh[node_idx];
-    bool near_v = true;
-    bool far_v = true;
-    if(node->tr_len){
-        for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++){
-            int norm_tmp;
-            int idx_tmp = tri_idx[i];
-            triangle_t* tr = &triangles[idx_tmp];
-            float t_tmp = hit_triangle(origin, dir, tr, &norm_tmp);
-            if(t_tmp < *t){
-                *t = t_tmp;
-                vec_t dir_scaled = vec_mul(dir, *t);
-                vec_t intersection = vec_add(origin, &dir_scaled);
-                vec_t o_minus_i = vec_sub(origin, &intersection);
-                if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i))
-                    return false;
+    int stack[64];
+    int stackIdx = 0;
+
+    stack[stackIdx++] = node_idx;
+
+    while(stackIdx){
+        bvh_t* node = &bvh[stack[--stackIdx]];
+        if(node->tr_len){
+            for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++){
+                int norm_tmp;
+                int idx_tmp = tri_idx[i];
+                triangle_t* tr = &triangles[idx_tmp];
+                float t_tmp = hit_triangle(origin, dir, tr, &norm_tmp);
+                if(t_tmp < *t){
+                    *t = t_tmp;
+                    vec_t dir_scaled = vec_mul(dir, *t);
+                    vec_t intersection = vec_add(origin, &dir_scaled);
+                    vec_t o_minus_i = vec_sub(origin, &intersection);
+                    if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i))
+                        return false;
+                }
             }
-        }
-    } else if(node->child) {
-        int near_idx = node->child;
-        int far_idx = node->child + 1;
-        bvh_t* left = &bvh[node->child];
-        bvh_t* right = &bvh[node->child + 1];
-        float near_t = aabb_intersect(&left->aabb, origin, dir);
-        float far_t = aabb_intersect(&right->aabb, origin, dir);
-        if(far_t < near_t){
-            int tmp_idx = near_idx;
-            float tmp_t = near_t;
-            near_idx = far_idx;
-            near_t = far_t;
-            far_idx = tmp_idx;
-            far_t = tmp_t;
-        }
-        if(near_t < *t){
-            near_v = bvh_light_traverse(near_idx, origin, dir, t, light_dist2);
+        } else if(node->child) {
+            int near_idx = node->child;
+            int far_idx = node->child + 1;
+            bvh_t* left = &bvh[node->child];
+            bvh_t* right = &bvh[node->child + 1];
+            float near_t = aabb_intersect(&left->aabb, origin, dir);
+            float far_t = aabb_intersect(&right->aabb, origin, dir);
+            if(far_t < near_t){
+                int tmp_idx = near_idx;
+                float tmp_t = near_t;
+                near_idx = far_idx;
+                near_t = far_t;
+                far_idx = tmp_idx;
+                far_t = tmp_t;
+            }
             if(far_t < *t)
-                far_v = bvh_light_traverse(far_idx, origin, dir, t, light_dist2);
+                stack[stackIdx++] = far_idx;
+            if(near_t < *t)
+                stack[stackIdx++] = near_idx;
         }
     }
 
-    return near_v && far_v;
+    return true;
 }
 
 void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx){
-    bvh_t* node = &bvh[node_idx];
-    if(node->tr_len){
-        for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++){
-            int norm_tmp;
-            int idx_tmp = tri_idx[i];
-            triangle_t* tr = &triangles[idx_tmp];
-            float t_tmp = hit_triangle(origin, dir, tr, &norm_tmp);
-            if(t_tmp < *t){
-                *t = t_tmp;
-                *norm_dir = norm_tmp;
-                *t_idx = idx_tmp;
+    int stack[64];
+    int stackIdx = 0;
+
+    stack[stackIdx++] = node_idx;
+
+    while(stackIdx){
+        bvh_t* node = &bvh[stack[--stackIdx]];
+        if(node->tr_len){
+            for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++){
+                int norm_tmp;
+                int idx_tmp = tri_idx[i];
+                triangle_t* tr = &triangles[idx_tmp];
+                float t_tmp = hit_triangle(origin, dir, tr, &norm_tmp);
+                if(t_tmp < *t){
+                    *t = t_tmp;
+                    *norm_dir = norm_tmp;
+                    *t_idx = idx_tmp;
+                }
             }
-        }
-    } else if(node->child) {
-        int near_idx = node->child;
-        int far_idx = node->child + 1;
-        bvh_t* left = &bvh[node->child];
-        bvh_t* right = &bvh[node->child + 1];
-        float near_t = aabb_intersect(&left->aabb, origin, dir);
-        float far_t = aabb_intersect(&right->aabb, origin, dir);
-        if(far_t < near_t){
-            int tmp_idx = near_idx;
-            float tmp_t = near_t;
-            near_idx = far_idx;
-            near_t = far_t;
-            far_idx = tmp_idx;
-            far_t = tmp_t;
-        }
-        if(near_t < *t){
-            bvh_traverse(near_idx, origin, dir, norm_dir, t, t_idx);
-            if(far_t < * t)
-                bvh_traverse(far_idx, origin, dir, norm_dir, t, t_idx);
+        } else if(node->child) {
+            int near_idx = node->child;
+            int far_idx = node->child + 1;
+            bvh_t* left = &bvh[node->child];
+            bvh_t* right = &bvh[node->child + 1];
+            float near_t = aabb_intersect(&left->aabb, origin, dir);
+            float far_t = aabb_intersect(&right->aabb, origin, dir);
+            if(far_t < near_t){
+                int tmp_idx = near_idx;
+                float tmp_t = near_t;
+                near_idx = far_idx;
+                near_t = far_t;
+                far_idx = tmp_idx;
+                far_t = tmp_t;
+            }
+            if(far_t < *t)
+                stack[stackIdx++] = far_idx;
+            if(near_t < *t)
+                stack[stackIdx++] = near_idx;
         }
     }
 }
