@@ -40,15 +40,17 @@ static vec_t aabb_center(const aabb_t* aabb){
     return vec_mul(&tmp, 0.5f);
 }
 
-static bool aabb_intersect(const aabb_t* aabb, const vec_t* origin, const vec_t* dir, float t){
+static float aabb_intersect(const aabb_t* aabb, const vec_t* origin, const vec_t* dir){
     float tx1 = (aabb->min.x - origin->x) / dir->x, tx2 = (aabb->max.x - origin->x) / dir->x;
 	float tmin = fminf( tx1, tx2 ), tmax = fmaxf( tx1, tx2 );
 	float ty1 = (aabb->min.y - origin->y) / dir->y, ty2 = (aabb->max.y - origin->y) / dir->y;
 	tmin = fmaxf( tmin, fminf( ty1, ty2 ) ), tmax = fminf( tmax, fmaxf( ty1, ty2 ) );
 	float tz1 = (aabb->min.z - origin->z) / dir->z, tz2 = (aabb->max.z - origin->z) / dir->z;
 	tmin = fmaxf( tmin, fminf( tz1, tz2 ) ), tmax = fminf( tmax, fmaxf( tz1, tz2 ) );
-    bool cond = tmax >= tmin && tmin < t && tmax > 0;
-	return cond;
+    bool cond = tmax >= tmin && tmax > 0;
+    if(cond)
+        return tmin;
+	return FLT_MAX;
 }
 
 static void aabb_grow_pt(aabb_t* aabb, const vec_t* point){
@@ -214,7 +216,7 @@ static void bvh_split(int node_idx, int depth){
 
 bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, float* t, float light_dist2){
     bvh_t* node = &bvh[node_idx];
-    bool hit = aabb_intersect(&node->aabb, origin, dir, *t);
+    bool hit = aabb_intersect(&node->aabb, origin, dir) < *t;
     if(hit){
         if(node->tr_len){
             for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++){
@@ -242,7 +244,7 @@ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, flo
 
 void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx){
     bvh_t* node = &bvh[node_idx];
-    bool hit = aabb_intersect(&node->aabb, origin, dir, *t);
+    bool hit = aabb_intersect(&node->aabb, origin, dir) < *t;
     if(hit){
         if(node->tr_len){
             for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++){

@@ -22,12 +22,12 @@ Reference (16:9):
 */
 
 /* number of frames to be rendered */
-#define ITERATIONS 10
+#define ITERATIONS 1
 
 #define NUM_THREADS 16
 
 /* each thread renders tiles of this size */
-#define TILE_SIZE 2048
+#define TILE_SIZE 4096
 
 /* number of bounces per ray */
 #define BOUNCES 4
@@ -36,8 +36,10 @@ Reference (16:9):
 
 /* max depth of bvh */
 #define BVH_MAX_ITER -1
+
 /* bvh recursion is stopped if the parent contains less than BVH_ELEMENT_THRESHOLD */
 #define BVH_ELEMENT_THRESHOLD 2
+
 /* 
     0: always axis 0
     1: axis with largest size
@@ -51,7 +53,7 @@ Reference (16:9):
 #define BVH_HEURISTIC 3
 
 /* BVH random split seed: only valid if either option 2 or 3 above are used */
-#define SEED 1
+#define SEED 0
 /*
     0: seed based on time (time(NULL)) -> Useful for random tests
     1: fixed seed (BVH is always the same) -> Useful to do proper benchmarks
