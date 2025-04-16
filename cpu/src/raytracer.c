@@ -106,8 +106,8 @@ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const 
 }
 
 vec_t raytrace(vec_t origin, vec_t dir, int iter){
-    vec_t col = {0};
-  
+    vec_t col = {0, 0, 0};
+
     if(iter == BOUNCES)
         return col;
     
@@ -118,11 +118,6 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
     //check nearest triangle
     #if USE_BVH == 1
     bvh_traverse(0, &origin, &dir, &norm_dir, &t, &index);
-    if(index != -1){
-        vec_t dir_scaled = vec_mul(&dir, t);
-        vec_t intersection = vec_add(&origin, &dir_scaled);
-        dist = vec_dist(&origin, &intersection);
-    }
     #else
     for(int i = 0; i < triangles_len; i++){
         int norm_tmp;
@@ -142,25 +137,20 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
     #endif
     
     if(index == -1){
-        col.r = amb_light.r;
-        col.g = amb_light.g;
-        col.b = amb_light.b;
+        col.r += amb_light.r;
+        col.g += amb_light.g;
+        col.b += amb_light.b;
     } else {
         vec_t dir_scaled = vec_mul(&dir, t);
         vec_t intersection = vec_add(&origin, &dir_scaled);
-        //if intersection is sphere
-        vec_t ks;
-        vec_t kd;
-        vec_t kr;
-        vec_t n;
-        ks = triangles[index].ks;
-        kd = triangles[index].kd;
-        kr = triangles[index].kr;
-        n = triangles[index].norm[norm_dir];
+        vec_t ks = triangles[index].ks;
+        vec_t kd = triangles[index].kd;
+        vec_t kr = triangles[index].kr;
+        vec_t n = triangles[index].norm[norm_dir];
         //apply ambient light
-        col.r = kd.r*amb_light.r;
-        col.g = kd.g*amb_light.g;
-        col.b = kd.b*amb_light.b;
+        col.r += kd.r*amb_light.r;
+        col.g += kd.g*amb_light.g;
+        col.b += kd.b*amb_light.b;
         dir = vec_mul(&dir, -1.0f);
         //apply point lights
         for(int i = 0; i < lights_len; i++){
@@ -190,9 +180,5 @@ vec_t raytrace(vec_t origin, vec_t dir, int iter){
         }
     }
 
-    vec_t vec_0 = {0, 0, 0};
-    vec_t vec_1 = {1, 1, 1};
-    vec_constrain(&col, &vec_0, &vec_1);
-        
     return col;
 }

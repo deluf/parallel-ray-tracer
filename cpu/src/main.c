@@ -66,12 +66,13 @@ double compute_ci(double mean, double stddev, int count) {
 int main() {
     cam_init(&cam, &(vec_t){0, -9, 3}, M_PI/3.2);
     cam.rot.x = -M_PI/12;
+    //cam.rot.z = M_PI/10;
 
     printf("Loading scene...\n");
 
     // Load resources once
-    triangles = triangles_load(SCENE "/triangles.obj", SCENE "/triangles.mtl", &triangles_len);
-    lights = lights_load(SCENE "/lights.obj", &lights_len);
+    triangles = triangles_load("../assets/" SCENE "/triangles.obj", "../assets/" SCENE "/triangles.mtl", &triangles_len);
+    lights = lights_load("../assets/" SCENE "/lights.obj", &lights_len);
 
     #if USE_BVH == 1
     printf("Building BVH...\n");
@@ -167,7 +168,11 @@ vec_t render_pixel(const vec_t* start, const vec_t* inc_x, const vec_t* inc_y, i
     vec_t pos_y = vec_mul(inc_y, y);
     dir = vec_add(&dir, &pos_x);
     dir = vec_add(&dir, &pos_y);
-    return raytrace(cam.pos, dir, 0);
+    vec_t col = raytrace(cam.pos, dir, 0);
+    const vec_t vec_0 = {0, 0, 0};
+    const vec_t vec_1 = {1, 1, 1};
+    vec_constrain(&col, &vec_0, &vec_1);
+    return col;
 }
 
 void* thread_render(void* arg) {

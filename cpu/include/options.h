@@ -54,7 +54,7 @@ Reference (16:9):
 #define BVH_HEURISTIC 6
 
 /* define the size of the bin to use for heuristic 6. If -1 is specified a brute force approach will be used */
-#define SAH_BIN_SIZE 16
+#define SAH_BIN_SIZE 32
 
 /* BVH random split seed: only valid if either option 2 or 3 above are used */
 #define SEED 1

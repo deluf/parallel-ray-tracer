@@ -1,0 +1,19 @@
+#ifndef __CAM_H__
+#define __CAM_H__
+
+#include "vec.cuh"
+
+typedef struct cam_t {
+    vec_t pos;
+    vec_t rot;
+    float fov;
+} cam_t;
+
+__host__ __device__ void cam_init(cam_t* cam, const vec_t* pos, float fov);
+__host__ __device__ void cam_rotate(cam_t* cam, vec_t* p);
+__host__ __device__ void cam_rotateX(cam_t* cam, vec_t* p);
+__host__ __device__ void cam_rotateY(cam_t* cam, vec_t* p);
+__host__ __device__ void cam_rotateZ(cam_t* cam, vec_t* p);
+__host__ __device__ void cam_calculate_screen_coords(cam_t* cam, vec_t* vecs, float aspect_ratio);
+
+#endif
