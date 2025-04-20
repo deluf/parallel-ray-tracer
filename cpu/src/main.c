@@ -24,6 +24,8 @@
 
 void* thread_render(void* arg);
 
+int NUM_THREADS = 1;
+
 cam_t cam;
 
 size_t triangles_len;
@@ -39,6 +41,27 @@ atomic_int pixel_counter;
 
 void render_frame();
 vec_t render_pixel(const vec_t* start, const vec_t* inc_x, const vec_t* inc_y, int x, int y);
+
+int compare_doubles(const void* a, const void* b) {
+    double diff = *(double*)a - *(double*)b;
+    return (diff > 0) - (diff < 0);
+}
+
+double compute_median(double times[], int count) {
+    double* sorted_times = malloc(count * sizeof(double));
+    for (int i = 0; i < count; i++) {
+        sorted_times[i] = times[i];
+    }
+    qsort(sorted_times, count, sizeof(double), compare_doubles);
+    double median;
+    if (count % 2 == 0) {
+        median = (sorted_times[count / 2 - 1] + sorted_times[count / 2]) / 2.0;
+    } else {
+        median = sorted_times[count / 2];
+    }
+    free(sorted_times);
+    return median;
+}
 
 double compute_mean(double times[], int count) {
     double sum = 0.0;
@@ -58,12 +81,21 @@ double compute_stddev(double times[], int count, double mean) {
 }
 
 double compute_ci(double mean, double stddev, int count) {
-    double z = 1.959963984540054;
+    //double z = 1.959963984540054;		// 95% CI
+    double z = 2.5758293035489004;		// 99% CI
     double standard_error = stddev / sqrt(count);
     return z * standard_error;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc > 1) {
+        NUM_THREADS = atoi(argv[1]);
+        if (NUM_THREADS <= 0 || NUM_THREADS >= 64) {
+            fprintf(stdout, "Invalid number of threads\n");
+            exit(-1);
+        }
+    }
+
     cam_init(&cam, &(vec_t){0, -9, 3}, M_PI/3.2);
     cam.rot.x = -M_PI/12;
     //cam.rot.z = M_PI/10;
@@ -89,7 +121,17 @@ int main() {
     float time = elapsed * 1000; // Convert to milliseconds
 
     printf("bvh built in %.3f ms\n", time);
+
+    printf("\n# BVH settings #\n");
+    printf("Max depth: %d\n", BVH_MAX_ITER);
+    printf("Leaf size threshold: %d\n", BVH_ELEMENT_THRESHOLD);
+    printf("Split heuristic: %d\n", BVH_HEURISTIC);
+    printf("Seed: %d\n", SEED);
+    printf("Fast light: %d\n", USE_BVH_FAST_LIGHT);
     #endif
+
+    printf("\n# Host settings #\n");
+    printf("Number of threads: %d\n", NUM_THREADS);
 
     printf("\n# Scene complexity #\n");
     printf("Resolution: %d x %d\n", WIDTH, HEIGHT);
@@ -131,19 +173,21 @@ int main() {
 
     // Compute metrics
     double mean = compute_mean(times, ITERATIONS);
+    double median = compute_median(times, ITERATIONS);
     double stddev = compute_stddev(times, ITERATIONS, mean);
     double ci_offset = compute_ci(mean, stddev, ITERATIONS);
     
     printf("\n# Metrics #\n");
     printf("Total execution time of %d frames: %.3f ms\n", ITERATIONS, mean * ITERATIONS);
-    if (ITERATIONS >= 30)
-        printf("Frame time (mean +/- 95%% CI): %.3f +/- %.3f = [%.3f, %.3f] ms\n",
+    #if ITERATIONS >= 30
+        printf("Frame time (mean +/- 99%% CI): %.3f +/- %.3f = [%.3f, %.3f] ms\n",
             mean, ci_offset, mean - ci_offset, mean + ci_offset);
-    else
+    #else
         printf("Frame time (mean): %.3f ms\n", mean);
+    #endif
+    printf("Frame time (median): %.3f ms\n", median);
     printf("Frame time (stddev): %.3f ms^2\n", stddev);
     printf("Expected FPS: %.3f\n", 1000 / mean);
-    //printf("Pixel time (mean): %.3f ms\n", (mean * 1000) / (WIDTH * HEIGHT));
     
     return 0;
 }

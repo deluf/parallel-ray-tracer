@@ -1,15 +1,13 @@
-/* scene options */
 
-#define SCENE "car_boxed"
-/*
-    car_only
-    car_boxed
-*/
+// ########################### WORKLOAD VARIATIONS ###########################
+
+// NUM_THREADS is a command line argument!
 
 #define WIDTH (1920)
 #define HEIGHT (1080)
 /*
 Reference (16:9):
+    32p:    64 x 32 -> RCA Studio II (1977)
     144p:   256 x 144
     240p:   426 x 240
     360p:   640 x 360
@@ -21,24 +19,7 @@ Reference (16:9):
     8k:     7680 x 4320
 */
 
-/* number of frames to be rendered */
-#define ITERATIONS 1
-
-#define NUM_THREADS 16
-
-/* each thread renders tiles of this size */
-#define TILE_SIZE WIDTH
-
-/* number of bounces per ray */
-#define BOUNCES 4
-
-/* bvh option */
-
-/* max depth of bvh */
-#define BVH_MAX_ITER 32
-
-/* bvh recursion is stopped if the parent contains less than BVH_ELEMENT_THRESHOLD */
-#define BVH_ELEMENT_THRESHOLD 2
+#define USE_BVH 1
 
 /* 
     0: always axis 0
@@ -48,13 +29,39 @@ Reference (16:9):
     4: median split on the largest axis
     5: median split on axis based on SAH score
     6: all possible splits based on SAH score
-
-    option 3 should be the fastest
 */
+
 #define BVH_HEURISTIC 6
+
+
+
+// ######################## DO NOT TOUCH IF BENCHMARKING ########################
+
+#define SCENE "car_boxed"
+/*
+    car_only
+    car_boxed
+    dragon
+    sportscar
+    two_cars
+*/
+
+#define TILE_SIZE WIDTH
+
+/* number of bounces per ray */
+#define BOUNCES 4
+
+/* number of frames to be rendered */
+#define ITERATIONS 30
+
+/* bvh recursion is stopped if the parent contains less than BVH_ELEMENT_THRESHOLD */
+#define BVH_ELEMENT_THRESHOLD 2
 
 /* define the size of the bin to use for heuristic 6. If -1 is specified a brute force approach will be used */
 #define SAH_BIN_SIZE 32
+
+/* Must be set if heuristic level is 0 1 or 2 */
+#define BVH_MAX_ITER 32
 
 /* BVH random split seed: only valid if either option 2 or 3 above are used */
 #define SEED 1
@@ -63,10 +70,5 @@ Reference (16:9):
     1: fixed seed (BVH is always the same) -> Useful to do proper benchmarks
 */
 
-/* print bvh metrics */
 #define BVH_METRICS 1
-
-/* raytracer */
-#define USE_BVH 1
-
 #define USE_BVH_FAST_LIGHT 1

@@ -1,6 +1,6 @@
 
 # Default target
-all: unsafe
+all: default
 
 # Set compiler and additional flags according to the OS
 UNAME_S := $(shell uname -s)
@@ -10,17 +10,8 @@ else
     CC = gcc
 endif
 
-naive:
-	$(CC) -Iinclude src/*.c -o raytracer.exe -lm
-
-optimize:
-	$(CC) -Iinclude -O3 -flto src/*.c -o raytracer.exe -lm
-
-unsafe:
+default:
 	$(CC) -Iinclude -O3 -ffast-math -march=native -flto src/*.c -o raytracer.exe -lm
-
-fast:
-	$(CC) -Iinclude -Ofast -march=native -flto src/*.c -o raytracer.exe -lm
 
 clean:
 	rm -f raytracer.exe
