@@ -192,6 +192,7 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
+#if USE_BALANCED_THREADS == 1
 void render_frame(){
     pthread_t threads[NUM_THREADS];
 
@@ -243,3 +244,66 @@ void* thread_render(void* arg) {
 
     return NULL;
 }
+#else
+typedef struct {
+    int from_idx;
+    int to_idx;
+} render_task_t;
+
+void render_frame(){
+    pthread_t threads[NUM_THREADS];
+    render_task_t tasks[NUM_THREADS];
+
+    int pixels_per_thread = (WIDTH * HEIGHT) / NUM_THREADS;
+
+    for(int i = 0; i < NUM_THREADS; i++) {
+        tasks[i].from_idx = i * pixels_per_thread;
+        tasks[i].to_idx = (i == NUM_THREADS - 1) ? (WIDTH * HEIGHT) : (i + 1) * pixels_per_thread;
+
+        pthread_create(&threads[i], NULL, thread_render, &tasks[i]);
+    }
+
+    for(int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+}
+
+void render_segment(int from_idx, int to_idx){
+    int from_x = from_idx % WIDTH;
+    int from_y = from_idx / WIDTH;
+    int to_x = to_idx % WIDTH;
+    int to_y = to_idx / WIDTH;
+    int pixels_len = to_idx - from_idx;
+    vec_t screen_points[3];
+    cam_calculate_screen_coords(&cam, screen_points, (float)WIDTH/HEIGHT);
+    vec_t ul = screen_points[0];
+    vec_t ur = screen_points[1];
+    vec_t dl = screen_points[2];
+    vec_t inc_x = vec_sub(&ur, &ul);
+    inc_x = vec_div(&inc_x, WIDTH);
+    vec_t inc_y = vec_sub(&dl, &ul);
+    inc_y = vec_div(&inc_y, HEIGHT);
+
+    for(int i = 0; i < pixels_len; i++){
+        int idx = from_idx + i;
+        int x = (idx % WIDTH);
+        int y = (idx / WIDTH);
+        pixels[from_idx + i] = render_pixel(&ul, &inc_x, &inc_y, x, y);
+    }
+}
+
+vec_t render_pixel(const vec_t* start, const vec_t* inc_x, const vec_t* inc_y, int x, int y){
+    vec_t dir = vec_sub(start, &cam.pos);
+    vec_t pos_x = vec_mul(inc_x, x);
+    vec_t pos_y = vec_mul(inc_y, y);
+    dir = vec_add(&dir, &pos_x);
+    dir = vec_add(&dir, &pos_y);
+    return raytrace(cam.pos, dir, 0);
+}
+
+void* thread_render(void* arg) {
+    render_task_t* task = (render_task_t*)arg;
+    render_segment(task->from_idx, task->to_idx);
+    return NULL;
+}
+#endif

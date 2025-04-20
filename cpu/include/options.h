@@ -3,8 +3,8 @@
 
 // NUM_THREADS is a command line argument!
 
-#define WIDTH (1920)
-#define HEIGHT (1080)
+#define WIDTH (64)
+#define HEIGHT (32)
 /*
 Reference (16:9):
     32p:    64 x 32 -> RCA Studio II (1977)
@@ -19,7 +19,7 @@ Reference (16:9):
     8k:     7680 x 4320
 */
 
-#define USE_BVH 1
+#define USE_BVH 0
 
 /* 
     0: always axis 0
@@ -31,7 +31,9 @@ Reference (16:9):
     6: all possible splits based on SAH score
 */
 
-#define BVH_HEURISTIC 6
+#define BVH_HEURISTIC 3
+
+#define USE_BALANCED_THREADS 0
 
 
 
