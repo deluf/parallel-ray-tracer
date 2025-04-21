@@ -37,7 +37,6 @@ light_t* lights;
 vec_t amb_light = {.r = 0.5, .g = 0.5, .b = 0.5};
 
 vec_t pixels[WIDTH*HEIGHT];
-atomic_int pixel_counter;
 
 void render_frame();
 vec_t render_pixel(const vec_t* start, const vec_t* inc_x, const vec_t* inc_y, int x, int y);
@@ -193,6 +192,8 @@ int main(int argc, char* argv[]) {
 }
 
 #if USE_BALANCED_THREADS == 1
+atomic_int pixel_counter;
+
 void render_frame(){
     pthread_t threads[NUM_THREADS];
 
@@ -298,7 +299,11 @@ vec_t render_pixel(const vec_t* start, const vec_t* inc_x, const vec_t* inc_y, i
     vec_t pos_y = vec_mul(inc_y, y);
     dir = vec_add(&dir, &pos_x);
     dir = vec_add(&dir, &pos_y);
-    return raytrace(cam.pos, dir, 0);
+    vec_t col = raytrace(cam.pos, dir, 0);
+    const vec_t vec_0 = {0, 0, 0};
+    const vec_t vec_1 = {1, 1, 1};
+    vec_constrain(&col, &vec_0, &vec_1);
+    return col;
 }
 
 void* thread_render(void* arg) {
