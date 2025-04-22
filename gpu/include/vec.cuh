@@ -3,17 +3,19 @@
 
 typedef struct vec_t {
     union {
-        float arr[3];
-        float3 arr3;
+        float arr[4];
+        float4 fl4;
         struct {
             float x;
             float y;
             float z;
+            float w;
         };
         struct {
             float r;
             float g;
             float b;
+            float a;
         };
     };
 } vec_t;

@@ -10,11 +10,19 @@ __host__ __device__ float vec_dist(const vec_t* v1, const vec_t* v2){
     float dx = v1->x - v2->x;
     float dy = v1->y - v2->y;
     float dz = v1->z - v2->z;
+    #ifdef __CUDA_ARCH__
+    return sqrtf(__fmaf_rn(dx, dx, __fmaf_rn(dy, dy, dz*dz)));
+    #else
     return sqrtf(dx * dx + dy * dy + dz * dz);
+    #endif
 }
 
 __host__ __device__ float vec_mag(const vec_t* v1){
+    #ifdef __CUDA_ARCH__
+    return sqrtf(__fmaf_rn(v1->x, v1->x, __fmaf_rn(v1->y, v1->y, v1->z*v1->z)));
+    #else
     return sqrtf(v1->x*v1->x + v1->y*v1->y + v1->z*v1->z);
+    #endif
 }
 
 __host__ __device__ void vec_normalize(vec_t* v1){
@@ -38,11 +46,19 @@ __host__ __device__ vec_t vec_div(const vec_t* v1, float val){
 }
 
 __host__ __device__ vec_t vec_cross(const vec_t* v1, const vec_t* v2){
+    #ifdef __CUDA_ARCH__
+    return vec_t{
+        __fmaf_rn(v1->y, v2->z, -v1->z*v2->y),
+        __fmaf_rn(v1->z, v2->x, -v1->x*v2->z),
+        __fmaf_rn(v1->x, v2->y, -v1->y*v2->x)
+    };
+    #else
     return vec_t{
         v1->y*v2->z - v1->z*v2->y,
         v1->z*v2->x - v1->x*v2->z,
         v1->x*v2->y - v1->y*v2->x
     };
+    #endif
 }
 
 __host__ __device__ void vec_constrain(vec_t* v, const vec_t* min, const vec_t* max){

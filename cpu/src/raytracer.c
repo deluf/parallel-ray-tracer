@@ -37,13 +37,13 @@ float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, 
     vec_t e1 = vec_sub(&tr->coords[1], &tr->coords[0]);
     vec_t e2 = vec_sub(&tr->coords[2], &tr->coords[0]);
     vec_t n = vec_cross(&e1, &e2);
-    volatile float det = -vec_dot(dir, &n);
+    float det = -vec_dot(dir, &n);
     float invdet = 1.0/det;
     vec_t ao = vec_sub(origin, &tr->coords[0]);
     vec_t dao = vec_cross(&ao, dir);
-    volatile float u = vec_dot(&e2, &dao)*invdet;
-    volatile float v = -vec_dot(&e1, &dao)*invdet;
-    volatile float t = vec_dot(&ao, &n)*invdet;
+    float u = vec_dot(&e2, &dao)*invdet;
+    float v = -vec_dot(&e1, &dao)*invdet;
+    float t = vec_dot(&ao, &n)*invdet;
     if(det > 0 && t > EPSILON && u > 0 && v > 0 && (u+v) < 1){
         return t;  
     }

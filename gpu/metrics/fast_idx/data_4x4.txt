@@ -1,0 +1,52 @@
+Loading scene...
+Building BVH...
+min number of triangle: 1
+max number of triangle: 2
+avg number of triangle: 1.59
+number of leaf: 28867
+bvh size (bytes): 1847456
+
+# Scene complexity #
+Resolution: 1920 x 1080
+Number of triangles: 45999
+Number of lights: 1
+Number of ray bounces: 4
+
+Rendering...
+Kernel time: 45.065216 ms
+Kernel time: 44.931072 ms
+Kernel time: 44.901375 ms
+Kernel time: 44.878849 ms
+Kernel time: 44.962719 ms
+Kernel time: 44.924927 ms
+Kernel time: 44.909569 ms
+Kernel time: 44.857346 ms
+Kernel time: 44.868607 ms
+Kernel time: 44.881920 ms
+Kernel time: 44.888065 ms
+Kernel time: 44.865536 ms
+Kernel time: 44.901089 ms
+Kernel time: 44.809090 ms
+Kernel time: 45.092640 ms
+Kernel time: 45.384480 ms
+Kernel time: 45.289471 ms
+Kernel time: 45.471489 ms
+Kernel time: 45.523968 ms
+Kernel time: 45.368160 ms
+Kernel time: 45.252609 ms
+Kernel time: 45.172672 ms
+Kernel time: 45.034496 ms
+Kernel time: 44.784641 ms
+Kernel time: 44.882721 ms
+Kernel time: 44.862465 ms
+Kernel time: 44.922752 ms
+Kernel time: 44.924927 ms
+Kernel time: 44.869633 ms
+Kernel time: 44.886017 ms
+
+# Metrics #
+Total execution time of 30 frames: 1350.368 ms
+Frame time (mean +/- 99% CI): 45.012 +/- 0.096 = [44.916, 45.109] ms
+Frame time (median): 44.916 ms
+Frame time (stddev): 0.205 ms^2
+Expected FPS: 22.216

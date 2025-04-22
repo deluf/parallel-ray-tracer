@@ -4,13 +4,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-void triangle_init(triangle_t* t, const vec_t* a, const vec_t* b, const vec_t* c, const vec_t* ks, const vec_t* kd, const vec_t* kr){
+void triangle_init(triangle_t* t, const vec_t* a, const vec_t* b, const vec_t* c, int mat_idx){
     t->coords[0] = *a;
     t->coords[1] = *b;
     t->coords[2] = *c;
-    t->ks = *ks;
-    t->kd = *kd;
-    t->kr = *kr;
+    t->mat_idx = mat_idx;
 
     vec_t e1 = vec_sub(&t->coords[1], &t->coords[0]);
     vec_t e2 = vec_sub(&t->coords[2], &t->coords[0]);
@@ -72,7 +70,7 @@ static int parse_materials(const char** mtl_lines, int mtl_line_count, material_
     return mat_count;
 }
 
-triangle_t* triangles_load(const char* objname, const char* mtlname, int* size) {
+triangle_t* triangles_load(const char* objname, const char* mtlname, int* size, mat_t** mats) {
     int obj_line_count, mtl_line_count;
     char** obj_lines = load_strings(objname, &obj_line_count);
     char** mtl_lines = load_strings(mtlname, &mtl_line_count);
@@ -87,10 +85,17 @@ triangle_t* triangles_load(const char* objname, const char* mtlname, int* size) 
         }
     }
 
-    material_t materials[128];
-    int mat_count = parse_materials((const char**)mtl_lines, mtl_line_count, materials, 128);
+    material_t materials[256];
+    int mat_count = parse_materials((const char**)mtl_lines, mtl_line_count, materials, 256);
 
-    vec_t current_ks = {0}, current_kd = {0}, current_kr = {0};
+    mat_t* mat_array = (mat_t*)malloc(mat_count * sizeof(mat_t));
+    for (int m = 0; m < mat_count; m++) {
+        mat_array[m].kd = materials[m].kd;
+        mat_array[m].ks = materials[m].ks;
+        mat_array[m].kr = materials[m].kr;
+    }
+
+    int current_mat_idx = 0;
     triangle_t* triangles = (triangle_t*)malloc(obj_line_count * sizeof(triangle_t));
     int tri_count = 0;
 
@@ -101,16 +106,14 @@ triangle_t* triangles_load(const char* objname, const char* mtlname, int* size) 
 
             for (int m = 0; m < mat_count; m++) {
                 if (strcmp(matname, materials[m].name) == 0) {
-                    current_kd = materials[m].kd;
-                    current_ks = materials[m].ks;
-                    current_kr = materials[m].kr;
+                    current_mat_idx = m;
                     break;
                 }
             }
         } else if (obj_lines[i][0] == 'f') {
             int v1, v2, v3;
             sscanf(obj_lines[i], "f %d %d %d", &v1, &v2, &v3);
-            triangle_init(&triangles[tri_count], &vertices[v1 - 1], &vertices[v2 - 1], &vertices[v3 - 1], &current_ks, &current_kd, &current_kr);
+            triangle_init(&triangles[tri_count], &vertices[v1 - 1], &vertices[v2 - 1], &vertices[v3 - 1], current_mat_idx);
             tri_count++;
         }
     }
@@ -123,5 +126,7 @@ triangle_t* triangles_load(const char* objname, const char* mtlname, int* size) 
     free(mtl_lines);
 
     *size = tri_count;
+    *mats = mat_array;
+
     return (triangle_t*)realloc(triangles, tri_count * sizeof(triangle_t)); // shrink to fit
 }

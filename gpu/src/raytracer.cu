@@ -6,14 +6,6 @@
 #include <float.h>
 #include <cuda_runtime.h>
 
-extern int triangles_len;
-extern triangle_t* triangles;
-
-extern int lights_len;
-extern light_t* lights;
-
-extern vec_t amb_light;
-
 #define EPSILON (1e-3)
 
 __device__ static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, const vec_t* l, const vec_t* v, float dot){
@@ -30,18 +22,18 @@ __device__ static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const ve
     return out;
 }
 
-__device__ float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, int* norm_dir){
+__device__ float hit_triangle(const vec_t* origin, const vec_t* dir, const gpu_triangle_t* tr, int* norm_dir){
     *norm_dir = 0;
     vec_t e1 = vec_sub(&tr->coords[1], &tr->coords[0]);
     vec_t e2 = vec_sub(&tr->coords[2], &tr->coords[0]);
     vec_t n = vec_cross(&e1, &e2);
-    volatile float det = -vec_dot(dir, &n);
+    float det = -vec_dot(dir, &n);
     float invdet = 1.0/det;
     vec_t ao = vec_sub(origin, &tr->coords[0]);
     vec_t dao = vec_cross(&ao, dir);
-    volatile float u = vec_dot(&e2, &dao)*invdet;
-    volatile float v = -vec_dot(&e1, &dao)*invdet;
-    volatile float t = vec_dot(&ao, &n)*invdet;
+    float u = vec_dot(&e2, &dao)*invdet;
+    float v = -vec_dot(&e1, &dao)*invdet;
+    float t = vec_dot(&ao, &n)*invdet;
     if(det > 0 && t > EPSILON && u > 0 && v > 0 && (u+v) < 1){
         return t;  
     }
@@ -86,23 +78,21 @@ __device__ vec_t raytrace(vec_t origin, vec_t dir){
         int norm_dir = 0;
         bvh_traverse(0, &origin, &dir, &norm_dir, &t, &index);
         if(index == -1){
-            final_col.r += multiplier.r*gpu_amb_light.r;
-            final_col.g += multiplier.g*gpu_amb_light.g;
-            final_col.b += multiplier.b*gpu_amb_light.b;
+            final_col.r = __fmaf_rn(multiplier.r, gpu_amb_light.r, final_col.r);
+            final_col.g = __fmaf_rn(multiplier.g, gpu_amb_light.g, final_col.g);
+            final_col.b = __fmaf_rn(multiplier.b, gpu_amb_light.b, final_col.b);
             break;
         } 
 
-        vec_t dir_scaled = vec_mul(&dir, t);
-        vec_t intersection = vec_add(&origin, &dir_scaled);
-        //if intersection is sphere
-        vec_t ks;
-        vec_t kd;
-        vec_t kr;
-        vec_t n;
-        ks = gpu_triangles[index].ks;
-        kd = gpu_triangles[index].kd;
-        kr = gpu_triangles[index].kr;
-        n = gpu_triangles[index].norm[norm_dir];
+        vec_t intersection;
+        intersection.x = __fma_rn(dir.x, t, origin.x);
+        intersection.y = __fma_rn(dir.y, t, origin.y);
+        intersection.z = __fma_rn(dir.z, t, origin.z);
+        const mat_t* __restrict__ mat = &gpu_mats[gpu_mat_idx[index]];
+        vec_t ks = mat->ks;
+        vec_t kd = mat->kd;
+        vec_t kr = mat->kr;
+        vec_t n = gpu_norms[index].norm[norm_dir];
         //apply ambient light
         col.r = kd.r*gpu_amb_light.r;
         col.g = kd.g*gpu_amb_light.g;

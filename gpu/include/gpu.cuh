@@ -6,17 +6,21 @@
 #include "bvh.cuh"
 #include "cam.cuh"
 
-extern __constant__ vec_t* gpu_pixels;
-extern __constant__ triangle_t* gpu_triangles;
+extern __constant__ vec_t* __restrict__ gpu_pixels;
+extern __constant__ const gpu_triangle_t* __restrict__ gpu_triangles;
+extern __constant__ const mat_t* __restrict__ gpu_mats;
+extern __constant__ const int* __restrict__ gpu_mat_idx;
+extern __constant__ const norm_t* __restrict__ gpu_norms;
 extern __constant__ int gpu_triangles_len;
-extern __constant__ int* gpu_tri_idx;
-extern __constant__ bvh_t* gpu_bvh;
-extern __constant__ light_t* gpu_lights;
+extern __constant__ const int* __restrict__ gpu_tri_idx;
+extern __constant__ const bvh_t* __restrict__ gpu_bvh;
+extern __constant__ const light_t* __restrict__ gpu_lights;
 extern __constant__ int gpu_lights_len;
 extern __constant__ cam_t gpu_cam;
 extern __constant__ vec_t gpu_amb_light;
+extern __constant__ cudaTextureObject_t tex_tri_idx;
 
-void render_frame();
+float render_frame(bool is_metrics, int tx, int ty);
 
 void load_to_gpu();
 void load_from_gpu();
