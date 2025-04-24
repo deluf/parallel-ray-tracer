@@ -358,12 +358,6 @@ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm
 }
 
 void bvh_build(triangle_t* triangles, size_t triangles_len){
-    #if SEED == 0
-    srand(time(NULL));
-    #else
-    srand(SEED);
-    #endif
-
     if(!triangles_len){
         printf("no triangles, cannot build bvh.\n");
         exit(EXIT_FAILURE);

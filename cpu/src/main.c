@@ -88,6 +88,12 @@ double compute_ci(double mean, double stddev, int count) {
 }
 
 int main(int argc, char* argv[]) {
+    #if SEED == 0
+    srand(time(NULL));
+    #else
+    srand(SEED);
+    #endif
+
     if (argc > 1) {
         NUM_THREADS = atoi(argv[1]);
         if (NUM_THREADS <= 0 || NUM_THREADS >= 64) {
@@ -103,8 +109,26 @@ int main(int argc, char* argv[]) {
     printf("Loading scene...\n");
 
     // Load resources once
-    triangles = triangles_load("../assets/" SCENE "/triangles.obj", "../assets/" SCENE "/triangles.mtl", &triangles_len);
-    lights = lights_load("../assets/" SCENE "/lights.obj", &lights_len);
+    if(argc != 3){
+        triangles = triangles_load("../assets/" SCENE "/triangles.obj", "../assets/" SCENE "/triangles.mtl", &triangles_len);
+        lights = lights_load("../assets/" SCENE "/lights.obj", &lights_len);
+    } else {
+        triangles_len = atoi(argv[2]);
+        triangles = (triangle_t*)malloc(sizeof(triangle_t)*triangles_len);
+        for(int i = 0; i < triangles_len; i++){
+            vec_t vec0 = {0.0f, 0.0f, 0.0f};
+            vec_t vec1 = {1.0f, 1.0f, 1.0f};
+            vec_t r0 = { (float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX };
+            vec_t r1 = { (float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX };
+            vec_t r2 = { (float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX };
+            vec_t a = vec_mul(&r0, 10);
+            a.x -= 5; a.y -= 5; a.z -= 5;
+            vec_t b = vec_add(&a, &r1);
+            vec_t c = vec_add(&b, &r2);
+            triangle_init(&triangles[i], &a, &b, &c, &vec1, &vec0, &vec0);
+        }
+        lights_len = 0;
+    }
 
     #if USE_BVH == 1
     printf("Building BVH...\n");

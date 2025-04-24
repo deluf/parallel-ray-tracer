@@ -32,36 +32,29 @@ static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const vec_t* n, con
     return out;
 }
 
-float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, int* norm_dir){
-    *norm_dir = 0;
+float hit_triangle(const vec_t* origin, const vec_t* dir, const triangle_t* tr, int* norm_dir) {
     vec_t e1 = vec_sub(&tr->coords[1], &tr->coords[0]);
     vec_t e2 = vec_sub(&tr->coords[2], &tr->coords[0]);
     vec_t n = vec_cross(&e1, &e2);
     float det = -vec_dot(dir, &n);
-    float invdet = 1.0/det;
+
+    *norm_dir = det < 0.0f;
+
+    float abs_det = fabsf(det);
+    if(abs_det < EPSILON)
+        return FLT_MAX;
+
+    float invdet = 1.0f / det;
     vec_t ao = vec_sub(origin, &tr->coords[0]);
     vec_t dao = vec_cross(&ao, dir);
-    float u = vec_dot(&e2, &dao)*invdet;
-    float v = -vec_dot(&e1, &dao)*invdet;
-    float t = vec_dot(&ao, &n)*invdet;
-    if(det > 0 && t > EPSILON && u > 0 && v > 0 && (u+v) < 1){
-        return t;  
-    }
 
-    *norm_dir = 1;
-    e2 = vec_sub(&tr->coords[1], &tr->coords[0]);
-    e1 = vec_sub(&tr->coords[2], &tr->coords[0]);
-    n = vec_cross(&e1, &e2);
-    det = -vec_dot(dir, &n);
-    invdet = 1.0/det;
-    ao = vec_sub(origin, &tr->coords[0]);
-    dao = vec_cross(&ao, dir);
-    u = vec_dot(&e2, &dao)*invdet;
-    v = -vec_dot(&e1, &dao)*invdet;
-    t = vec_dot(&ao, &n)*invdet;
-    if(det > 0 && t > EPSILON && u > 0 && v > 0 && (u+v) < 1)
-      return t;  
-  
+    float u = vec_dot(&e2, &dao) * invdet;
+    float v = -vec_dot(&e1, &dao) * invdet;
+    float t = vec_dot(&ao, &n) * invdet;
+
+    if(t > EPSILON && u >= 0.0f && v >= 0.0f && (u + v) <= 1.0f)
+        return t;
+
     return FLT_MAX;
 }
 

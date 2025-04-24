@@ -15,53 +15,44 @@ __device__ static vec_t lambert_blinn(const vec_t* ks, const vec_t* kd, const ve
     float coeff = fmax(0.0f, vec_dot(n, &h));
 
     vec_t out;
-    out.r = kd->r*fmaxf(0.0f, dot)+ks->r*coeff;
-    out.g = kd->g*fmaxf(0.0f, dot)+ks->g*coeff;
-    out.b = kd->b*fmaxf(0.0f, dot)+ks->b*coeff;
-
+    out = vec_mul(kd, fmaxf(0.0f, dot));
+    out = vec_ma(ks, coeff, &out);
     return out;
 }
 
-__device__ float hit_triangle(const vec_t* origin, const vec_t* dir, const gpu_triangle_t* tr, int* norm_dir){
-    *norm_dir = 0;
+__device__ float hit_triangle(const vec_t* origin, const vec_t* dir, const gpu_triangle_t* tr, int* norm_dir) {
     vec_t e1 = vec_sub(&tr->coords[1], &tr->coords[0]);
     vec_t e2 = vec_sub(&tr->coords[2], &tr->coords[0]);
     vec_t n = vec_cross(&e1, &e2);
     float det = -vec_dot(dir, &n);
-    float invdet = 1.0/det;
+
+    *norm_dir = det < 0.0f;
+
+    float abs_det = fabsf(det);
+    if(abs_det < EPSILON)
+        return FLT_MAX;
+
+    float invdet = 1.0f / det;
     vec_t ao = vec_sub(origin, &tr->coords[0]);
     vec_t dao = vec_cross(&ao, dir);
-    float u = vec_dot(&e2, &dao)*invdet;
-    float v = -vec_dot(&e1, &dao)*invdet;
-    float t = vec_dot(&ao, &n)*invdet;
-    if(det > 0 && t > EPSILON && u > 0 && v > 0 && (u+v) < 1){
-        return t;  
-    }
 
-    *norm_dir = 1;
-    e2 = vec_sub(&tr->coords[1], &tr->coords[0]);
-    e1 = vec_sub(&tr->coords[2], &tr->coords[0]);
-    n = vec_cross(&e1, &e2);
-    det = -vec_dot(dir, &n);
-    invdet = 1.0/det;
-    ao = vec_sub(origin, &tr->coords[0]);
-    dao = vec_cross(&ao, dir);
-    u = vec_dot(&e2, &dao)*invdet;
-    v = -vec_dot(&e1, &dao)*invdet;
-    t = vec_dot(&ao, &n)*invdet;
-    if(det > 0 && t > EPSILON && u > 0 && v > 0 && (u+v) < 1)
-      return t;  
-  
+    float u = vec_dot(&e2, &dao) * invdet;
+    float v = -vec_dot(&e1, &dao) * invdet;
+    float t = vec_dot(&ao, &n) * invdet;
+
+    if(t > EPSILON && u >= 0.0f && v >= 0.0f && (u + v) <= 1.0f)
+        return t;
+
     return FLT_MAX;
 }
 
 // light visibility - check if the ligh reach the points or is blocked by a sphere or traingle
-__device__ static int light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const vec_t* light){
+__device__ static float light_v(const vec_t* origin, const vec_t* dir, const vec_t* n, const vec_t* light){
     vec_t tmp = vec_sub(origin, light);
     vec_t tmp2 = vec_sub(light, origin);
     float light_dist2 = vec_dot(&tmp, &tmp);
-    if(vec_dot(&tmp2, n) < 0)
-        return 0;
+    if(vec_dot(&tmp2, n) < 0.0f)
+        return 0.0f;
     //check nearest triangle
     float t = FLT_MAX;
     return bvh_light_traverse(0, origin, dir, &t, light_dist2);
@@ -78,16 +69,11 @@ __device__ vec_t raytrace(vec_t origin, vec_t dir){
         int norm_dir = 0;
         bvh_traverse(0, &origin, &dir, &norm_dir, &t, &index);
         if(index == -1){
-            final_col.r = __fmaf_rn(multiplier.r, gpu_amb_light.r, final_col.r);
-            final_col.g = __fmaf_rn(multiplier.g, gpu_amb_light.g, final_col.g);
-            final_col.b = __fmaf_rn(multiplier.b, gpu_amb_light.b, final_col.b);
+            final_col = vec_ma(&multiplier, &gpu_amb_light, &final_col);
             break;
         } 
 
-        vec_t intersection;
-        intersection.x = __fma_rn(dir.x, t, origin.x);
-        intersection.y = __fma_rn(dir.y, t, origin.y);
-        intersection.z = __fma_rn(dir.z, t, origin.z);
+        vec_t intersection = vec_ma(&dir, t, &origin);
         const mat_t* __restrict__ mat = &gpu_mats[gpu_mat_idx[index]];
         vec_t ks = mat->ks;
         vec_t kd = mat->kd;
@@ -106,27 +92,22 @@ __device__ vec_t raytrace(vec_t origin, vec_t dir){
             mag *= mag;
             float n_dot_l = vec_dot(&n, &l);
             vec_t col_ray = lambert_blinn(&ks, &kd, &n, &l, &dir, n_dot_l);
-            int V = light_v(&intersection, &l, &n, &gpu_lights[i].pos);
-            col.r += V*gpu_lights[i].kl.r*col_ray.r/mag;
-            col.g += V*gpu_lights[i].kl.g*col_ray.g/mag;
-            col.b += V*gpu_lights[i].kl.b*col_ray.b/mag;
+            float V = light_v(&intersection, &l, &n, &gpu_lights[i].pos);
+            vec_t light_shade = vec_mul(&gpu_lights[i].kl, &col_ray);
+            light_shade = vec_div(&light_shade, mag);
+            col = vec_ma(&light_shade, V, &col);
         }
 
-        final_col.r += multiplier.r*col.r;
-        final_col.g += multiplier.g*col.g;
-        final_col.b += multiplier.b*col.b;
+        final_col = vec_ma(&multiplier, &col, &final_col);
 
-        multiplier.r *= kr.r;
-        multiplier.g *= kr.g;
-        multiplier.b *= kr.b;
-
-        if(vec_mag(&multiplier) < EPSILON)
+        if(vec_mag2(&multiplier) < EPSILON*EPSILON)
             break;
 
+        multiplier = vec_mul(&multiplier, &kr);
+
         //real raytracing EXTREMELY HEAVY
-        dir = vec_mul(&dir, -1);
-        vec_t n_scaled = vec_mul(&n, 2*fabsf(vec_dot(&dir, &n)));
-        dir = vec_add(&dir, &n_scaled);
+        dir = vec_mul(&dir, -1.0f);
+        dir = vec_ma(&n, 2.0f*fabsf(vec_dot(&dir, &n)), &dir);
         vec_normalize(&dir);
         origin = intersection;
     }

@@ -21,6 +21,7 @@ typedef struct triangle_t {
 
 typedef struct gpu_triangle_t {
     vec_t coords[3];
+    vec_t pad;
 } gpu_triangle_t;
 
 typedef struct norm_t {

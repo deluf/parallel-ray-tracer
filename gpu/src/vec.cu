@@ -11,7 +11,7 @@ __host__ __device__ float vec_dist(const vec_t* v1, const vec_t* v2){
     float dy = v1->y - v2->y;
     float dz = v1->z - v2->z;
     #ifdef __CUDA_ARCH__
-    return sqrtf(__fmaf_rn(dx, dx, __fmaf_rn(dy, dy, dz*dz)));
+    return norm3df(dx, dy, dz);
     #else
     return sqrtf(dx * dx + dy * dy + dz * dz);
     #endif
@@ -19,10 +19,14 @@ __host__ __device__ float vec_dist(const vec_t* v1, const vec_t* v2){
 
 __host__ __device__ float vec_mag(const vec_t* v1){
     #ifdef __CUDA_ARCH__
-    return sqrtf(__fmaf_rn(v1->x, v1->x, __fmaf_rn(v1->y, v1->y, v1->z*v1->z)));
+    return norm3df(v1->x, v1->y, v1->z);
     #else
     return sqrtf(v1->x*v1->x + v1->y*v1->y + v1->z*v1->z);
     #endif
+}
+
+__host__ __device__ float vec_mag2(const vec_t* v1){
+    return v1->x*v1->x + v1->y*v1->y + v1->z*v1->z;
 }
 
 __host__ __device__ void vec_normalize(vec_t* v1){
@@ -31,6 +35,10 @@ __host__ __device__ void vec_normalize(vec_t* v1){
 
 __host__ __device__ vec_t vec_mul(const vec_t* v1, float val){
     return vec_t{v1->x*val, v1->y*val, v1->z*val};
+}
+
+__host__ __device__ vec_t vec_mul(const vec_t* v1, const vec_t* v2){
+    return vec_t{v1->x*v2->x, v1->y*v2->y, v1->z*v2->z};
 }
 
 __host__ __device__ vec_t vec_add(const vec_t* v1, const vec_t* v2){
@@ -82,5 +90,21 @@ __host__ __device__ vec_t vec_max(const vec_t* v1, const vec_t* v2){
         fmaxf(v1->x, v2->x),
         fmaxf(v1->y, v2->y),
         fmaxf(v1->z, v2->z)
+    };
+}
+
+__device__ vec_t vec_ma(const vec_t* v1, const vec_t* v2, const vec_t* v3){
+    return vec_t{
+        __fmaf_rn(v1->x, v2->x, v3->x),
+        __fmaf_rn(v1->y, v2->y, v3->y),
+        __fmaf_rn(v1->z, v2->z, v3->z)
+    };
+}
+
+__device__ vec_t vec_ma(const vec_t* v1, float t, const vec_t* v3){
+    return vec_t{
+        __fmaf_rn(v1->x, t, v3->x),
+        __fmaf_rn(v1->y, t, v3->y),
+        __fmaf_rn(v1->z, t, v3->z)
     };
 }

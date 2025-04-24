@@ -48,13 +48,19 @@ static float aabb_area(const aabb_t* aabb){
 }
 
 __device__ static float aabb_intersect(const aabb_t* aabb, const vec_t* origin, const vec_t* dir){
-    float tx1 = (aabb->min.x - origin->x) / dir->x, tx2 = (aabb->max.x - origin->x) / dir->x;
-	float tmin = fminf( tx1, tx2 ), tmax = fmaxf( tx1, tx2 );
-	float ty1 = (aabb->min.y - origin->y) / dir->y, ty2 = (aabb->max.y - origin->y) / dir->y;
-	tmin = fmaxf( tmin, fminf( ty1, ty2 ) ), tmax = fminf( tmax, fmaxf( ty1, ty2 ) );
-	float tz1 = (aabb->min.z - origin->z) / dir->z, tz2 = (aabb->max.z - origin->z) / dir->z;
-	tmin = fmaxf( tmin, fminf( tz1, tz2 ) ), tmax = fminf( tmax, fmaxf( tz1, tz2 ) );
-    bool cond = tmax >= tmin && tmax > 0;
+    float tx1 = (aabb->min.x - origin->x) / dir->x;
+    float tx2 = (aabb->max.x - origin->x) / dir->x;
+	float tmin = fminf( tx1, tx2 );
+    float tmax = fmaxf( tx1, tx2 );
+	float ty1 = (aabb->min.y - origin->y) / dir->y;
+    float ty2 = (aabb->max.y - origin->y) / dir->y;
+	tmin = fmaxf( tmin, fminf( ty1, ty2 ) );
+    tmax = fminf( tmax, fmaxf( ty1, ty2 ) );
+	float tz1 = (aabb->min.z - origin->z) / dir->z;
+    float tz2 = (aabb->max.z - origin->z) / dir->z;
+	tmin = fmaxf( tmin, fminf( tz1, tz2 ) );
+    tmax = fminf( tmax, fmaxf( tz1, tz2 ) );
+    bool cond = tmax >= tmin && tmax > 0.0f;
     if(cond)
         return tmin;
 	return FLT_MAX;
@@ -275,13 +281,13 @@ __device__ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_
     stack[stackIdx++] = node_idx;
 
     while(stackIdx){
-        const bvh_t* __restrict__ node = &gpu_bvh[stack[--stackIdx]];
-        if(node->tr_len){
-            for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++){
+        bvh_t node = gpu_bvh[stack[--stackIdx]];
+        if(node.tr_len){
+            for(int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++){
                 int norm_tmp;
                 int idx_tmp = gpu_tri_idx[i];
-                const gpu_triangle_t* __restrict__ tr = &gpu_triangles[idx_tmp];
-                float t_tmp = hit_triangle(origin, dir, tr, &norm_tmp);
+                gpu_triangle_t tr = gpu_triangles[idx_tmp];
+                float t_tmp = hit_triangle(origin, dir, &tr, &norm_tmp);
                 if(t_tmp < *t){
                     *t = t_tmp;
                     vec_t dir_scaled = vec_mul(dir, *t);
@@ -291,13 +297,13 @@ __device__ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_
                         return false;
                 }
             }
-        } else if(node->child) {
-            int near_idx = node->child;
-            int far_idx = node->child + 1;
-            const bvh_t* __restrict__ left = &gpu_bvh[node->child];
-            const bvh_t* __restrict__ right = &gpu_bvh[node->child + 1];
-            float near_t = aabb_intersect(&left->aabb, origin, dir);
-            float far_t = aabb_intersect(&right->aabb, origin, dir);
+        } else if(node.child) {
+            int near_idx = node.child;
+            int far_idx = node.child + 1;
+            bvh_t left = gpu_bvh[node.child];
+            bvh_t right = gpu_bvh[node.child + 1];
+            float near_t = aabb_intersect(&left.aabb, origin, dir);
+            float far_t = aabb_intersect(&right.aabb, origin, dir);
             if(far_t < near_t){
                 int tmp_idx = near_idx;
                 float tmp_t = near_t;
@@ -323,27 +329,27 @@ __device__ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir
     stack[stackIdx++] = node_idx;
 
     while(stackIdx) {
-        const bvh_t* __restrict__ node = &gpu_bvh[stack[--stackIdx]];
+        bvh_t node = gpu_bvh[stack[--stackIdx]];
 
-        if(node->tr_len) {
-            for(int i = node->tr_idx; i < node->tr_idx + node->tr_len; i++) {
+        if(node.tr_len) {
+            for(int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++) {
                 int norm_tmp;
                 int idx_tmp = gpu_tri_idx[i];
-                const gpu_triangle_t* __restrict__ tr = &gpu_triangles[idx_tmp];
-                float t_tmp = hit_triangle(origin, dir, tr, &norm_tmp);
+                gpu_triangle_t tr = gpu_triangles[idx_tmp];
+                float t_tmp = hit_triangle(origin, dir, &tr, &norm_tmp);
                 if(t_tmp < *t) {
                     *t = t_tmp;
                     *norm_dir = norm_tmp;
                     *t_idx = idx_tmp;
                 }
             }
-        } else if(node->child) {
-            int near_idx = node->child;
-            int far_idx = node->child + 1;
-            const bvh_t* __restrict__ left = &gpu_bvh[node->child];
-            const bvh_t* __restrict__ right = &gpu_bvh[node->child + 1];
-            float near_t = aabb_intersect(&left->aabb, origin, dir);
-            float far_t = aabb_intersect(&right->aabb, origin, dir);
+        } else if(node.child) {
+            int near_idx = node.child;
+            int far_idx = node.child + 1;
+            bvh_t left = gpu_bvh[node.child];
+            bvh_t right = gpu_bvh[node.child + 1];
+            float near_t = aabb_intersect(&left.aabb, origin, dir);
+            float far_t = aabb_intersect(&right.aabb, origin, dir);
 
             if(far_t < near_t) {
                 int tmp_idx = near_idx;
