@@ -3,11 +3,11 @@
 
 #include "vec.cuh"
 
-typedef struct cam_t {
+struct cam_t {
     vec_t pos;
     vec_t rot;
     float fov;
-} cam_t;
+};
 
 __host__ __device__ void cam_init(cam_t* cam, const vec_t* pos, float fov);
 __host__ __device__ void cam_rotate(cam_t* cam, vec_t* p);

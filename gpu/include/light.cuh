@@ -5,10 +5,10 @@
 
 #include "vec.cuh"
 
-typedef struct light_t {
+struct light_t {
     vec_t pos;
     vec_t kl;
-} light_t;
+};
 
 light_t* lights_load(const char* filename, int* size);
 

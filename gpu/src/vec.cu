@@ -30,7 +30,11 @@ __host__ __device__ float vec_mag2(const vec_t* v1){
 }
 
 __host__ __device__ void vec_normalize(vec_t* v1){
+    #ifdef __CUDA_ARCH__
+    *v1 = vec_mul(v1, rnorm3df(v1->x, v1->y, v1->z));
+    #else
     *v1 = vec_div(v1, vec_mag(v1));
+    #endif
 }
 
 __host__ __device__ vec_t vec_mul(const vec_t* v1, float val){

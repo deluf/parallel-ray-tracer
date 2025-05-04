@@ -325,7 +325,7 @@ __device__ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_
 __device__ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx){
     int stack[32];
     int stackIdx = 0;
-    
+
     stack[stackIdx++] = node_idx;
 
     while(stackIdx) {

@@ -1,7 +1,7 @@
 #ifndef __VEC_H__
 #define __VEC_H__
 
-typedef struct vec_t {
+struct vec_t {
     union {
         float arr[4];
         float4 fl4;
@@ -18,7 +18,7 @@ typedef struct vec_t {
             float a;
         };
     };
-} vec_t;
+};
 
 __host__ __device__ float vec_dot(const vec_t* v1, const vec_t* v2);
 __host__ __device__ float vec_dist(const vec_t* v1, const vec_t* v2);
