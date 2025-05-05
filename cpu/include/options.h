@@ -31,9 +31,9 @@ Reference (16:9):
     6: all possible splits based on SAH score
 */
 
-#define BVH_HEURISTIC 3
+#define BVH_HEURISTIC 6
 
-#define USE_BALANCED_THREADS 0
+#define USE_BALANCED_THREADS 1
 
 
 
