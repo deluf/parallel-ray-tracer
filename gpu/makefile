@@ -11,6 +11,9 @@ endif
 SRC = $(wildcard src/*.cpp src/*.cu)
 
 default:
+	nvcc -O3 -use_fast_math -Iinclude -rdc=true -dlto $(SRC) -o raytracer.exe -arch=$(SM_ARCH)
+
+debug:
 	nvcc -O3 -use_fast_math -Iinclude -split-compile=0 -g -lineinfo -rdc=true -dlto $(SRC) -o raytracer.exe -arch=$(SM_ARCH)
 
 clean:
