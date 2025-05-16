@@ -3,7 +3,7 @@
 
 #include <cuda_fp16.h>
 
-typedef struct vec_t {
+struct vec_t {
     union {
         float arr[4];
         float4 fl4;
@@ -24,10 +24,10 @@ typedef struct vec_t {
             float a;
         };
     };
-} vec_t;
+};
 
 
-typedef struct hvec_t {
+struct hvec_t {
     union {
         __half arr[4];
         struct {
@@ -53,7 +53,7 @@ typedef struct hvec_t {
     __host__ __device__ hvec_t(const hvec_t& other) : xy(other.xy), zw(other.zw) {}
     __host__ __device__ hvec_t& operator=(const hvec_t& other) { xy = other.xy; zw = other.zw; return *this; }
     
-} hvec_t;
+};
 
 __host__ __device__ float vec_dot(const vec_t* v1, const vec_t* v2);
 __host__ __device__ float vec_dist(const vec_t* v1, const vec_t* v2);
