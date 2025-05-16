@@ -112,3 +112,73 @@ __device__ vec_t vec_ma(const vec_t* v1, float t, const vec_t* v3){
         __fmaf_rn(v1->z, t, v3->z)
     };
 }
+
+/// __half VEC
+
+__device__ __half hvec_dot(const hvec_t* v1, const hvec_t* v2){
+    return v1->x*v2->x + v1->y*v2->y + v1->z*v2->z;
+}
+
+__device__ __half hvec_dist(const hvec_t* v1, const hvec_t* v2){
+    __half dx = v1->x - v2->x;
+    __half dy = v1->y - v2->y;
+    __half dz = v1->z - v2->z;
+    return hsqrt(dx*dx + dy*dy + dz*dz);
+}
+
+__device__ __half hvec_mag(const hvec_t* v1){
+    return hsqrt(v1->x*v1->x + v1->y*v1->y + v1->z*v1->z);
+}
+
+__device__ void hvec_normalize(hvec_t* v1){
+    *v1 = hvec_div(v1, hvec_mag(v1));
+}
+
+__device__ hvec_t hvec_mul(const hvec_t* v1, __half val){
+    return hvec_t{v1->x*val, v1->y*val, v1->z*val};
+}
+
+__device__ hvec_t hvec_add(const hvec_t* v1, const hvec_t* v2){
+    return hvec_t{v1->x+v2->x, v1->y+v2->y, v1->z+v2->z};
+}
+
+__device__ hvec_t hvec_sub(const hvec_t* v1, const hvec_t* v2){
+    return hvec_t{v1->x-v2->x, v1->y-v2->y, v1->z-v2->z};
+}
+
+__device__ hvec_t hvec_div(const hvec_t* v1, __half val){
+    return hvec_t{v1->x/val, v1->y/val, v1->z/val};
+}
+
+__device__ hvec_t hvec_cross(const hvec_t* v1, const hvec_t* v2){
+    return hvec_t{
+        v1->y*v2->z - v1->z*v2->y,
+        v1->z*v2->x - v1->x*v2->z,
+        v1->x*v2->y - v1->y*v2->x
+    };
+}
+
+__device__ void hvec_constrain(hvec_t* v, const hvec_t* min, const hvec_t* max){
+    v->x = __hmax(v->x, min->x);
+    v->y = __hmax(v->y, min->y);
+    v->z = __hmax(v->z, min->z);
+    v->x = __hmin(v->x, max->x);
+    v->y = __hmin(v->y, max->y);
+    v->z = __hmin(v->z, max->z);
+}
+
+__device__ hvec_t hvec_min(const hvec_t* v1, const hvec_t* v2){
+    return hvec_t{
+        __hmin(v1->x, v2->x),
+        __hmin(v1->y, v2->y),
+        __hmin(v1->z, v2->z)
+    };
+}
+__device__ hvec_t hvec_max(const hvec_t* v1, const hvec_t* v2){
+    return hvec_t{
+        __hmax(v1->x, v2->x),
+        __hmax(v1->y, v2->y),
+        __hmax(v1->z, v2->z)
+    };
+}
+

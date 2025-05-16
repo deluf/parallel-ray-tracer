@@ -2,12 +2,7 @@
 all: default
 
 # Set compiler and additional flags according to the OS
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Linux)
-    SM_ARCH = sm_75
-else
-    SM_ARCH = sm_86
-endif
+SM_ARCH = sm_86
 SRC = $(wildcard src/*.cpp src/*.cu)
 
 default:

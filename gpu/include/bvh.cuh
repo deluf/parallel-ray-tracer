@@ -11,6 +11,22 @@ struct aabb_t {
     vec_t max;
 };
 
+struct haabb_t {
+    hvec_t min;
+    hvec_t max;
+};
+
+struct hbvh_t {
+    haabb_t aabb;
+    int tr_len;
+    // triangle_idx if leaf, else child_idx
+    // (tr_len > 0 : leaf)
+    union {
+        int tr_idx;
+        int child;
+    };
+};
+
 struct bvh_t {
     aabb_t aabb;
     int tr_len;

@@ -35,7 +35,7 @@ __constant__ const int* __restrict__ gpu_mat_idx;
 __constant__ const norm_t* __restrict__ gpu_norms;
 __constant__ int gpu_triangles_len;
 __constant__ const int* __restrict__ gpu_tri_idx;
-__constant__ const bvh_t* __restrict__ gpu_bvh;
+__constant__ const hbvh_t* __restrict__ gpu_bvh;
 __constant__ const light_t* __restrict__ gpu_lights;
 __constant__ int gpu_lights_len;
 __constant__ cam_t gpu_cam;
@@ -173,10 +173,22 @@ void load_to_gpu() {
     cudaMemcpy(tri_ptr, tri_idx, sizeof(int)*triangles_len, cudaMemcpyHostToDevice);
     cudaMemcpyToSymbol(gpu_tri_idx, &tri_ptr, sizeof(int*));
 
-    bvh_t* bvh_ptr;
-    cudaMalloc(&bvh_ptr, sizeof(bvh_t)*bvh_len);
-    cudaMemcpy(bvh_ptr, bvh, sizeof(bvh_t)*bvh_len, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol(gpu_bvh, &bvh_ptr, sizeof(bvh_t*));
+    hbvh_t* host_hbvh;
+    host_hbvh = (hbvh_t*)malloc(sizeof(hbvh_t)*bvh_len);
+    for(int i = 0; i < bvh_len; i++){
+        host_hbvh[i].tr_idx = bvh[i].tr_idx;
+        host_hbvh[i].tr_len = bvh[i].tr_len;
+        host_hbvh[i].aabb.min.xy = __float22half2_rn(bvh[i].aabb.min.xy);
+        host_hbvh[i].aabb.min.zw = __float22half2_rn(bvh[i].aabb.min.zw);
+        host_hbvh[i].aabb.max.xy = __float22half2_rn(bvh[i].aabb.max.xy);
+        host_hbvh[i].aabb.max.zw = __float22half2_rn(bvh[i].aabb.max.zw);
+    }
+
+    hbvh_t* hbvh_ptr;
+    cudaMalloc(&hbvh_ptr, sizeof(hbvh_t)*bvh_len);
+    cudaMemcpy(hbvh_ptr, host_hbvh, sizeof(hbvh_t)*bvh_len, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(gpu_bvh, &hbvh_ptr, sizeof(hbvh_t*));
+    free(host_hbvh);
 
     cudaMemcpyToSymbol(gpu_triangles_len, &triangles_len, sizeof(int));
     cudaMemcpyToSymbol(gpu_lights_len, &lights_len, sizeof(int));
@@ -210,7 +222,7 @@ void load_from_gpu() {
     cudaMemcpyFromSymbol(&tri_ptr, gpu_tri_idx, sizeof(int*));
     cudaFree(tri_ptr);
 
-    bvh_t* bvh_ptr;
-    cudaMemcpyFromSymbol(&bvh_ptr, gpu_bvh, sizeof(bvh_t*));
-    cudaFree(bvh_ptr);
+    hbvh_t* hbvh_ptr;
+    cudaMemcpyFromSymbol(&hbvh_ptr, gpu_bvh, sizeof(bvh_t*));
+    cudaFree(hbvh_ptr);
 }

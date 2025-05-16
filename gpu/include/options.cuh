@@ -22,8 +22,8 @@ Reference (16:9):
 */
 
 /* number of frames to be rendered */
-#define ITERATIONS 30
-#define WARMUP 30
+#define ITERATIONS 100
+#define WARMUP 50
 
 /* number of bounces per ray */
 #define BOUNCES 4

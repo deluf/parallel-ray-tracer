@@ -13,7 +13,7 @@ extern __constant__ const int* __restrict__ gpu_mat_idx;
 extern __constant__ const norm_t* __restrict__ gpu_norms;
 extern __constant__ int gpu_triangles_len;
 extern __constant__ const int* __restrict__ gpu_tri_idx;
-extern __constant__ const bvh_t* __restrict__ gpu_bvh;
+extern __constant__ const hbvh_t* __restrict__ gpu_bvh;
 extern __constant__ const light_t* __restrict__ gpu_lights;
 extern __constant__ int gpu_lights_len;
 extern __constant__ cam_t gpu_cam;

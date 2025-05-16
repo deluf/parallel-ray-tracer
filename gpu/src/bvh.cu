@@ -47,23 +47,34 @@ static float aabb_area(const aabb_t* aabb){
     return vec_dot(&size, &size);
 }
 
-__device__ static float aabb_intersect(const aabb_t* aabb, const vec_t* origin, const vec_t* dir){
-    float tx1 = (aabb->min.x - origin->x) / dir->x;
-    float tx2 = (aabb->max.x - origin->x) / dir->x;
-	float tmin = fminf( tx1, tx2 );
-    float tmax = fmaxf( tx1, tx2 );
-	float ty1 = (aabb->min.y - origin->y) / dir->y;
-    float ty2 = (aabb->max.y - origin->y) / dir->y;
-	tmin = fmaxf( tmin, fminf( ty1, ty2 ) );
-    tmax = fminf( tmax, fmaxf( ty1, ty2 ) );
-	float tz1 = (aabb->min.z - origin->z) / dir->z;
-    float tz2 = (aabb->max.z - origin->z) / dir->z;
-	tmin = fmaxf( tmin, fminf( tz1, tz2 ) );
-    tmax = fminf( tmax, fmaxf( tz1, tz2 ) );
-    bool cond = tmax >= tmin && tmax > 0.0f;
-    if(cond)
+__device__ static half aabb_intersect(const haabb_t* aabb, const hvec_t* origin, const hvec_t* dir) {
+    // XY slab
+    half2 t1_xy = __h2div(__hsub2(aabb->min.xy, origin->xy), dir->xy);
+    half2 t2_xy = __h2div(__hsub2(aabb->max.xy, origin->xy), dir->xy);
+
+    // Z slab (only .x used)
+    half t1_z = __hdiv(__hsub(aabb->min.zw.x, origin->zw.x), dir->zw.x);
+    half t2_z = __hdiv(__hsub(aabb->max.zw.x, origin->zw.x), dir->zw.x);
+
+    // Min/max for xy
+    half2 tmin2 = __hmin2(t1_xy, t2_xy);
+    half2 tmax2 = __hmax2(t1_xy, t2_xy);
+
+    // Reduce half2 to half
+    half tmin = __hmax(tmin2.x, tmin2.y);
+    half tmax = __hmin(tmax2.x, tmax2.y);
+
+    // Z min/max
+    half tz1 = t1_z;
+    half tz2 = t2_z;
+
+    tmin = __hmax(tmin, __hmin(tz1, tz2));
+    tmax = __hmin(tmax, __hmax(tz1, tz2));
+
+    bool cond = __hge(tmax, tmin) && __hgt(tmax, 0.0f);
+    if (cond)
         return tmin;
-	return FLT_MAX;
+    return __float2half(FLT_MAX);
 }
 
 static void aabb_grow_pt(aabb_t* aabb, const vec_t* point){
@@ -274,95 +285,107 @@ static void bvh_split(int node_idx, int depth){
     bvh_split(parent->child + 1, depth + 1);
 }
 
-__device__ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, float* t, float light_dist2){
+__device__ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, float* t, float light_dist2) {
     int stack[32];
     int stackIdx = 0;
 
+    // Convert to hvec_t
+    hvec_t h_origin, h_dir;
+    h_origin.xy = __floats2half2_rn(origin->x, origin->y);
+    h_origin.zw = __floats2half2_rn(origin->z, 0.0f);
+    h_dir.xy = __floats2half2_rn(dir->x, dir->y);
+    h_dir.zw = __floats2half2_rn(dir->z, 1.0f);
+
     stack[stackIdx++] = node_idx;
 
-    while(stackIdx){
-        bvh_t node = gpu_bvh[stack[--stackIdx]];
-        if(node.tr_len){
-            for(int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++){
+    while (stackIdx) {
+        hbvh_t node = gpu_bvh[stack[--stackIdx]];
+        if (node.tr_len) {
+            for (int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++) {
                 int norm_tmp;
                 int idx_tmp = gpu_tri_idx[i];
                 gpu_triangle_t tr = gpu_triangles[idx_tmp];
                 float t_tmp = hit_triangle(origin, dir, &tr, &norm_tmp);
-                if(t_tmp < *t){
+                if (t_tmp < *t) {
                     *t = t_tmp;
                     vec_t dir_scaled = vec_mul(dir, *t);
                     vec_t intersection = vec_add(origin, &dir_scaled);
                     vec_t o_minus_i = vec_sub(origin, &intersection);
-                    if(light_dist2 > vec_dot(&o_minus_i, &o_minus_i))
+                    if (light_dist2 > vec_dot(&o_minus_i, &o_minus_i))
                         return false;
                 }
             }
-        } else if(node.child) {
+        } else if (node.child) {
             int near_idx = node.child;
             int far_idx = node.child + 1;
-            bvh_t left = gpu_bvh[node.child];
-            bvh_t right = gpu_bvh[node.child + 1];
-            float near_t = aabb_intersect(&left.aabb, origin, dir);
-            float far_t = aabb_intersect(&right.aabb, origin, dir);
-            if(far_t < near_t){
+            hbvh_t left = gpu_bvh[node.child];
+            hbvh_t right = gpu_bvh[node.child + 1];
+            half near_t = aabb_intersect(&left.aabb, &h_origin, &h_dir);
+            half far_t = aabb_intersect(&right.aabb, &h_origin, &h_dir);
+            if (__hlt(far_t, near_t)) {
                 int tmp_idx = near_idx;
-                float tmp_t = near_t;
+                half tmp_t = near_t;
                 near_idx = far_idx;
                 near_t = far_t;
                 far_idx = tmp_idx;
                 far_t = tmp_t;
             }
-            if(far_t < *t)
+            if (__hlt(far_t, __float2half(*t)))
                 stack[stackIdx++] = far_idx;
-            if(near_t < *t)
+            if (__hlt(near_t, __float2half(*t)))
                 stack[stackIdx++] = near_idx;
         }
     }
-
     return true;
 }
 
-__device__ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx){
+__device__ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx) {
     int stack[32];
     int stackIdx = 0;
 
+    // Convert to hvec_t
+    hvec_t h_origin, h_dir;
+    h_origin.xy = __floats2half2_rn(origin->x, origin->y);
+    h_origin.zw = __floats2half2_rn(origin->z, 0.0f);
+    h_dir.xy = __floats2half2_rn(dir->x, dir->y);
+    h_dir.zw = __floats2half2_rn(dir->z, 1.0f);
+
     stack[stackIdx++] = node_idx;
 
-    while(stackIdx) {
-        bvh_t node = gpu_bvh[stack[--stackIdx]];
+    while (stackIdx) {
+        hbvh_t node = gpu_bvh[stack[--stackIdx]];
 
-        if(node.tr_len) {
-            for(int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++) {
+        if (node.tr_len) {
+            for (int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++) {
                 int norm_tmp;
                 int idx_tmp = gpu_tri_idx[i];
                 gpu_triangle_t tr = gpu_triangles[idx_tmp];
                 float t_tmp = hit_triangle(origin, dir, &tr, &norm_tmp);
-                if(t_tmp < *t) {
+                if (t_tmp < *t) {
                     *t = t_tmp;
                     *norm_dir = norm_tmp;
                     *t_idx = idx_tmp;
                 }
             }
-        } else if(node.child) {
+        } else if (node.child) {
             int near_idx = node.child;
             int far_idx = node.child + 1;
-            bvh_t left = gpu_bvh[node.child];
-            bvh_t right = gpu_bvh[node.child + 1];
-            float near_t = aabb_intersect(&left.aabb, origin, dir);
-            float far_t = aabb_intersect(&right.aabb, origin, dir);
+            hbvh_t left = gpu_bvh[node.child];
+            hbvh_t right = gpu_bvh[node.child + 1];
+            half near_t = aabb_intersect(&left.aabb, &h_origin, &h_dir);
+            half far_t = aabb_intersect(&right.aabb, &h_origin, &h_dir);
 
-            if(far_t < near_t) {
+            if (__hlt(far_t, near_t)) {
                 int tmp_idx = near_idx;
-                float tmp_t = near_t;
+                half tmp_t = near_t;
                 near_idx = far_idx;
                 near_t = far_t;
                 far_idx = tmp_idx;
                 far_t = tmp_t;
             }
-
-            if(far_t < *t)
+            if (__hlt(far_t, __float2half(*t)))
                 stack[stackIdx++] = far_idx;
-            if(near_t < *t)
+            if (__hlt(near_t, __float2half(*t)))
                 stack[stackIdx++] = near_idx;
         }
     }
