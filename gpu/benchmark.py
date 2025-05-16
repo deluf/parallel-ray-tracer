@@ -18,8 +18,7 @@ os.system("make clean")
 os.system("make")
 print("")
 
-for i, j in [(1,1), (2,4), (4,4), (4, 8), (8,8), (8, 16)]:
-
+for i, j in [(4, 8), (8, 8), (8, 12), (8, 16), (10, 16), (12, 16), (14, 16), (16, 16)]:
     # Run the raytracer.exe with the current iteration and redirect outputs
     output_file = destination_folder + f"/stdout-{i}x{j}.txt"
     print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} > Running ./raytracer {i} {j} ...", end=" ")
