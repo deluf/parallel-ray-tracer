@@ -3,8 +3,6 @@
 
 #include "vec.h"
 
-#include <stddef.h>
-
-void* bmp_write(vec_t* pixels, int width, int height, size_t* size);
+int bmp_write_file(vec_t* pixels, int width, int height, const char* filename);
 
 #endif

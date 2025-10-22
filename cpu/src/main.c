@@ -184,16 +184,11 @@ int main(int argc, char* argv[]) {
         printf("Iteration %d completed in %.3f ms\n", i + 1, times[i]);
     }
 
-    // Only save the last image
-    size_t img_len;
-    void* img = bmp_write(pixels, WIDTH, HEIGHT, &img_len);
-    FILE* fptr = fopen("render.bmp", "wb");
-    fwrite(img, 1, img_len, fptr);
-    fclose(fptr);
-    free(img);
-
     free(triangles);
     free(lights);
+    
+    // Only save the last image
+    if (bmp_write_file(pixels, WIDTH, HEIGHT, SCENE ".bmp") != 0) { return -1; }
 
     // Compute metrics
     double mean = compute_mean(times, ITERATIONS);

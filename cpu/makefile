@@ -11,8 +11,8 @@ else
 endif
 
 default:
-	$(CC) -Iinclude -O3 -ffast-math -march=native -flto src/*.c -o raytracer.exe -lm
+	$(CC) -Iinclude -O3 -ffast-math -march=native -flto src/*.c -o raytracer -lm
 
 clean:
-	rm -f raytracer.exe
+	rm -f raytracer
 	rm -f render.bmp

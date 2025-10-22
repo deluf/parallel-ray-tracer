@@ -31,7 +31,7 @@ Reference (16:9):
     6: all possible splits based on SAH score
 */
 
-#define BVH_HEURISTIC 6
+#define BVH_HEURISTIC 3
 
 
 
@@ -52,7 +52,7 @@ Reference (16:9):
 #define BOUNCES 4
 
 /* number of frames to be rendered */
-#define ITERATIONS 30
+#define ITERATIONS 1
 
 /* bvh recursion is stopped if the parent contains less than BVH_ELEMENT_THRESHOLD */
 #define BVH_ELEMENT_THRESHOLD 2
