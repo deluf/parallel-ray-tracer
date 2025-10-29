@@ -2,7 +2,7 @@
 
 #include <stdlib.h> // malloc(), free()
 #include <string.h> // memcpy(), memset()
-#include <stdio.h>  // FILE, fopen(), fwrite(), fclose(), perror()
+#include <stdio.h>  // FILE, fopen(), fwrite(), fclose(), fprintf(), stderr
 #include <stddef.h> // size_t
 #include <stdint.h> // uint*_t
 
@@ -153,7 +153,7 @@ static void write_pixel_array(uint8_t* bmp_buffer, int header_size, vec_t* pixel
     uint32_t* row_buffer = (uint32_t*)malloc(row_size);
     if (!row_buffer)
     {
-        perror("Unable to allocate space for the BMP row buffer - No pixels will be written");
+        fprintf(stderr, "Error: unable to allocate space for the BMP row buffer");
         return;
     }
     
@@ -187,7 +187,8 @@ static uint8_t* bmp_write(vec_t* pixels, int width, int height, size_t* size)
 {    
     if (BMP_BITS_PER_PIXEL != 32)
     {
-        perror("This implementation bmp_write only works for bpp=32");
+        fprintf(stderr, "Error: bmp_write only works for 32 bits per pixel,"
+            " got %d instead\n", BMP_BITS_PER_PIXEL);
         return NULL;
     }
 
@@ -199,7 +200,7 @@ static uint8_t* bmp_write(vec_t* pixels, int width, int height, size_t* size)
     uint8_t* bmp_buffer = (uint8_t*)malloc(file_size);
     if (!bmp_buffer) 
     {
-        perror("Unable to allocated space for the BMP buffer");
+        fprintf(stderr, "Error: unable to allocate space for the BMP buffer");
         return NULL;
     }
     memset(bmp_buffer, 0, file_size);
@@ -216,7 +217,7 @@ int bmp_write_file(vec_t* pixels, int width, int height, const char* filename)
 {
     if (!pixels || width <= 0 || height <= 0 || !filename) 
     {
-        perror("bmp_write_file function called with bad parameters");
+        fprintf(stderr, "Error: bmp_write_file function called with bad parameters");
         return -1;
     }
 
@@ -224,7 +225,7 @@ int bmp_write_file(vec_t* pixels, int width, int height, const char* filename)
     uint8_t* img_bytes = bmp_write(pixels, width, height, &img_size);
     if (!img_bytes) 
     { 
-        perror("Unable to create the BMP buffer");
+        fprintf(stderr, "Error: unable to create the BMP buffer");
         return -1; 
     }
     
@@ -232,14 +233,14 @@ int bmp_write_file(vec_t* pixels, int width, int height, const char* filename)
     if (!img_file) 
     { 
         free(img_bytes);
-        perror("Unable to open the BMP file");
+        fprintf(stderr, "Error: unable to open the BMP file %s", filename);
         return -1; 
     }
     
     if (fwrite(img_bytes, 1, img_size, img_file) != img_size) 
     {
         free(img_bytes);
-        perror("Unable to save BMP buffer to disk");
+        fprintf(stderr, "Error: unable to save BMP buffer to disk");
         return -1;
     }
     
