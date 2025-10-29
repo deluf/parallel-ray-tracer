@@ -84,8 +84,14 @@
 #define BMP_OFFSET_BPP 0x1C
 #define BMP_OFFSET_COMPRESSION 0x1E
 
-// Converts float RGB to 32-bit BGRA format
-static inline uint32_t vec_to_bgra(vec_t pixel) 
+/**
+ * Converts an RGB color stored as a vec_t (with float components 0–1)
+ *  into a 32-bit BGRA integer value (with 8 bits per channel)
+ *
+ * @param pixel A vec_t containing r, g and b float values
+ * @return The 32-bit BGRA representation of the pixel
+ */
+static inline uint32_t rgb_to_bgra(vec_t pixel) 
 {
     uint8_t r = (uint8_t)(pixel.r * 255.0f);
     uint8_t g = (uint8_t)(pixel.g * 255.0f);
@@ -94,6 +100,13 @@ static inline uint32_t vec_to_bgra(vec_t pixel)
     return b | (g << 8) | (r << 16) | (a << 24);
 }
 
+/**
+ * Writes the BMP file header into the provided buffer
+ *
+ * @param bmp_buffer Pointer to the output BMP byte buffer
+ * @param file_size Total size of the BMP file in bytes
+ * @param header_size Offset where pixel data begins
+ */
 static void write_file_header(uint8_t* bmp_buffer, int file_size, int header_size) 
 {
     bmp_buffer[BMP_OFFSET_SIGNATURE] = BMP_SIGNATURE_B;
@@ -103,7 +116,13 @@ static void write_file_header(uint8_t* bmp_buffer, int file_size, int header_siz
     memcpy(bmp_buffer + BMP_OFFSET_DATA_START, &header_size, 4);
 }
 
-// Writes a DIB header of type BITMAPINFOHEADER
+/**
+ * Writes the DIB header (particularly, of type BITMAPINFOHEADER) into the BMP buffer
+ *
+ * @param bmp_buffer Pointer to the output BMP byte buffer
+ * @param width Image width in pixels
+ * @param height Image height in pixels
+ */
 static void write_dib_header(uint8_t* bmp_buffer, int width, int height) 
 {
     int header_size = BMP_DIB_HEADER_SIZE;
@@ -119,6 +138,16 @@ static void write_dib_header(uint8_t* bmp_buffer, int width, int height)
     memcpy(bmp_buffer + BMP_OFFSET_COMPRESSION, &compression, 4);
 }
 
+/**
+ * Writes the pixel array to the BMP buffer in BGRA format
+ *
+ * @param bmp_buffer Pointer to the BMP byte buffer
+ * @param header_size Offset from the start of the file where pixel data begins
+ * @param pixels Pointer to the source pixel data (array of vec_t)
+ * @param width Image width in pixels
+ * @param height Image height in pixels
+ * @param row_size Size of a single pixel row in bytes (aligned to 4 bytes)
+ */
 static void write_pixel_array(uint8_t* bmp_buffer, int header_size, vec_t* pixels, int width, int height, int row_size) 
 {
     uint32_t* row_buffer = (uint32_t*)malloc(row_size);
@@ -136,7 +165,7 @@ static void write_pixel_array(uint8_t* bmp_buffer, int header_size, vec_t* pixel
         
         for (int x = 0; x < width; x++) 
         {
-            row_buffer[x] = vec_to_bgra(src_pixels[x]);
+            row_buffer[x] = rgb_to_bgra(src_pixels[x]);
         }
         
         memcpy(bmp_buffer + header_size + y * row_size, row_buffer, row_size);
@@ -145,6 +174,15 @@ static void write_pixel_array(uint8_t* bmp_buffer, int header_size, vec_t* pixel
     free(row_buffer);
 }
 
+/**
+ * Creates a complete BMP image in memory from raw pixel data
+ *
+ * @param pixels Pointer to the pixel data (array of vec_t, RGB floats 0–1)
+ * @param width Image width in pixels
+ * @param height Image height in pixels
+ * @param size Pointer to a variable that receives the total BMP size in bytes
+ * @return Pointer to the allocated BMP byte buffer, or NULL on failure
+ */
 static uint8_t* bmp_write(vec_t* pixels, int width, int height, size_t* size)
 {    
     if (BMP_BITS_PER_PIXEL != 32)
