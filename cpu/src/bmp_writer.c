@@ -233,7 +233,7 @@ int bmp_write_file(vec_t* pixels, int width, int height, const char* filename)
     if (!img_file) 
     { 
         free(img_bytes);
-        fprintf(stderr, "Error: unable to open the BMP file %s", filename);
+        fprintf(stderr, "Error: unable to open '%s'", filename);
         return -1; 
     }
     

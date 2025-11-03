@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
     // Load resources once
     if(argc != 3){
         triangles = triangles_load("../assets/" SCENE "/triangles.obj", "../assets/" SCENE "/triangles.mtl", &triangles_len);
-        lights = lights_load("../assets/" SCENE "/lights.obj", &lights_len);
+        lights = load_lights("../assets/" SCENE "/lights.obj", &lights_len);
     } else {
         triangles_len = atoi(argv[2]);
         triangles = (triangle_t*)malloc(sizeof(triangle_t)*triangles_len);

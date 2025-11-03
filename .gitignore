@@ -167,3 +167,10 @@ $RECYCLE.BIN/
 simulations/
 profile/
 metrics/
+
+# Executable
+**/raytracer
+
+# AI stuff
+PROMPT.txt
+

@@ -1,29 +1,88 @@
 #include "light.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdio.h>   // FILE, fopen(), fgets(), fclose(), fprintf(), stderr
+#include <stdlib.h>  // malloc(), realloc(), free()
+#include <ctype.h>   // isspace()
 
-light_t* lights_load(const char* filename, size_t* size){
-    light_t* lights = NULL;
-    *size = 0;
-    FILE* fptr = fopen(filename, "r");
-    if(!fptr){
-        printf("cannot open %s\n", filename);
-        exit(EXIT_FAILURE);
+light_t* load_lights(const char* filename, size_t* count)
+{
+    if (!filename || !count)
+    {
+        fprintf(stderr, "Error: load_lights function called with bad parameters\n");
+        return NULL;
     }
 
-    lights = malloc(sizeof(light_t));
+    *count = 0;
+
+    FILE* lights_file = fopen(filename, "r");
+    if (!lights_file)
+    {
+        fprintf(stderr, "Error: cannot open '%s'\n", filename);
+        return NULL;
+    }
+
+    size_t capacity = 1; // Initial capacity  
+    light_t* lights = malloc(capacity * sizeof(light_t));
+    if (!lights)
+    {
+        fprintf(stderr, "Error: unable to allocate memory for the lights buffer\n");
+        fclose(lights_file);
+        return NULL;
+    }
 
     char line[256];
-    while (fgets(line, sizeof(line), fptr) != NULL) {
-        light_t l;
-        sscanf(line, "%f %f %f %f %f %f", &l.pos.x, &l.pos.y, &l.pos.z, &l.kl.r, &l.kl.g, &l.kl.b);
-        *size += 1;
-        lights = realloc(lights, sizeof(light_t)*(*size));
-        lights[*size-1] = l;
+    size_t line_num = 0;
+
+    while (fgets(line, sizeof(line), lights_file))
+    {
+        line_num++;
+
+        light_t light;
+        int parsed = sscanf(line, "%f %f %f %f %f %f",
+                           &light.pos.x, &light.pos.y, &light.pos.z,
+                           &light.kl.r, &light.kl.g, &light.kl.b);
+
+        if (parsed != 6)
+        {
+            fprintf(stderr, "Warning: skipping malformed line %zu in '%s'\n",
+                   line_num, filename);
+            continue;
+        }
+
+        if (*count >= capacity)
+        {
+            capacity *= 2;
+            light_t* lights_expanded = realloc(lights, capacity * sizeof(light_t));
+            if (!lights_expanded)
+            {
+                fprintf(stderr, "Error: unable to reallocate the lights buffe\n");
+                free(lights);
+                fclose(lights_file);
+                return NULL;
+            }
+            lights = lights_expanded;
+        }
+
+        lights[*count] = light;
+        (*count)++;
     }
 
-    fclose(fptr);
+    fclose(lights_file);
+
+    if (*count == 0)
+    {
+        free(lights);
+        return NULL;
+    }
+
+    if (*count < capacity)
+    {
+        light_t* lights_compressed = realloc(lights, *count * sizeof(light_t));
+        if (lights_compressed)
+        {
+            lights = lights_compressed;
+        }
+    }
 
     return lights;
 }
