@@ -153,7 +153,7 @@ static void write_pixel_array(uint8_t* bmp_buffer, int header_size, vec_t* pixel
     uint32_t* row_buffer = (uint32_t*)malloc(row_size);
     if (!row_buffer)
     {
-        fprintf(stderr, "Error: unable to allocate space for the BMP row buffer");
+        fprintf(stderr, "Error: unable to allocate space for the BMP row buffer\n");
         return;
     }
     
@@ -200,7 +200,7 @@ static uint8_t* bmp_write(vec_t* pixels, int width, int height, size_t* size)
     uint8_t* bmp_buffer = (uint8_t*)malloc(file_size);
     if (!bmp_buffer) 
     {
-        fprintf(stderr, "Error: unable to allocate space for the BMP buffer");
+        fprintf(stderr, "Error: unable to allocate space for the BMP buffer\n");
         return NULL;
     }
     memset(bmp_buffer, 0, file_size);
@@ -217,7 +217,7 @@ int bmp_write_file(vec_t* pixels, int width, int height, const char* filename)
 {
     if (!pixels || width <= 0 || height <= 0 || !filename) 
     {
-        fprintf(stderr, "Error: bmp_write_file function called with bad parameters");
+        fprintf(stderr, "Error: bmp_write_file function called with bad parameters\n");
         return -1;
     }
 
@@ -225,7 +225,7 @@ int bmp_write_file(vec_t* pixels, int width, int height, const char* filename)
     uint8_t* img_bytes = bmp_write(pixels, width, height, &img_size);
     if (!img_bytes) 
     { 
-        fprintf(stderr, "Error: unable to create the BMP buffer");
+        fprintf(stderr, "Error: unable to create the BMP buffer\n");
         return -1; 
     }
     
@@ -233,14 +233,14 @@ int bmp_write_file(vec_t* pixels, int width, int height, const char* filename)
     if (!img_file) 
     { 
         free(img_bytes);
-        fprintf(stderr, "Error: unable to open '%s'", filename);
+        fprintf(stderr, "Error: unable to open '%s'\n", filename);
         return -1; 
     }
     
     if (fwrite(img_bytes, 1, img_size, img_file) != img_size) 
     {
         free(img_bytes);
-        fprintf(stderr, "Error: unable to save BMP buffer to disk");
+        fprintf(stderr, "Error: unable to save BMP buffer to disk\n");
         return -1;
     }
     
