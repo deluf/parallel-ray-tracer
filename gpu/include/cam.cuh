@@ -11,9 +11,9 @@ struct cam_t {
 
 __host__ __device__ void cam_init(cam_t* cam, const vec_t* pos, float fov);
 __host__ __device__ void cam_rotate(cam_t* cam, vec_t* p);
-__host__ __device__ void cam_rotateX(cam_t* cam, vec_t* p);
-__host__ __device__ void cam_rotateY(cam_t* cam, vec_t* p);
-__host__ __device__ void cam_rotateZ(cam_t* cam, vec_t* p);
+__host__ __device__ void cam_rotate_x(cam_t* cam, vec_t* p);
+__host__ __device__ void cam_rotate_y(cam_t* cam, vec_t* p);
+__host__ __device__ void cam_rotate_z(cam_t* cam, vec_t* p);
 __host__ __device__ void cam_calculate_screen_coords(cam_t* cam, vec_t* vecs, float aspect_ratio);
 
 #endif

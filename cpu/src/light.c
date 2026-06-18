@@ -39,7 +39,7 @@ light_t* load_lights(const char* filename, size_t* count)
 
         light_t light;
         int parsed = sscanf(line, "%f %f %f %f %f %f",
-                           &light.pos.x, &light.pos.y, &light.pos.z,
+                           &light.position.x, &light.position.y, &light.position.z,
                            &light.kl.r, &light.kl.g, &light.kl.b);
 
         if (parsed != 6)

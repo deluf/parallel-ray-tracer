@@ -1,9 +1,22 @@
 #include "triangle.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 
-void triangle_init(triangle_t* t, const vec_t* a, const vec_t* b, const vec_t* c, const vec_t* ks, const vec_t* kd, const vec_t* kr){
+#include <stdio.h>   // FILE, fopen(), fprintf(), sscanf(), fgets(), fclose(), stderr
+#include <string.h>  // strcpy(), strcmp(), strncmp()
+#include <stdlib.h>  // exit(), malloc(), realloc(), free(), EXIT_FAILURE
+
+/**
+ * Initializes a triangle object
+ *
+ * @param t Pointer to the triangle
+ * @param a Pointer to the first vertex
+ * @param b Pointer to the second vertex
+ * @param c Pointer to the third vertex
+ * @param ks Pointer to the specular vector
+ * @param kd Pointer to the diffuse vector
+ * @param kr Pointer to the reflection vector
+ */
+void triangle_init(triangle_t* t, const vec_t* a, const vec_t* b, const vec_t* c, const vec_t* ks, const vec_t* kd, const vec_t* kr)
+{
     t->coords[0] = *a;
     t->coords[1] = *b;
     t->coords[2] = *c;
@@ -23,10 +36,19 @@ void triangle_init(triangle_t* t, const vec_t* a, const vec_t* b, const vec_t* c
     t->centroid[2] = (t->coords[0].z + t->coords[1].z + t->coords[2].z) / 3.0f;
 }
 
-static char** load_strings(const char* filename, int* lineCount) {
+/**
+ * Loads strings from a file
+ *
+ * @param filename Path to the file
+ * @param lineCount Pointer to store the number of lines read
+ * @return Array of pointers to the loaded strings
+ */
+static char** load_strings(const char* filename, int* lineCount)
+{
     FILE* file = fopen(filename, "r");
-    if(!file){
-        printf("cannot load %s\n", filename);
+    if (!file)
+    {
+        fprintf(stderr, "Error: cannot load %s\n", filename);
         exit(EXIT_FAILURE);
     }
     
@@ -34,7 +56,8 @@ static char** load_strings(const char* filename, int* lineCount) {
     char buffer[256];
     int count = 0;
     
-    while(fgets(buffer, sizeof(buffer), file)) {
+    while (fgets(buffer, sizeof(buffer), file))
+    {
         lines = realloc(lines, (count + 1) * sizeof(char*));
         lines[count] = malloc(sizeof(buffer));
         strcpy(lines[count], buffer);
@@ -46,24 +69,47 @@ static char** load_strings(const char* filename, int* lineCount) {
     return lines;
 }
 
-typedef struct {
+/**
+ * Material structure
+ */
+typedef struct
+{
     char name[256];
     vec_t kd, ks, kr;
 } material_t;
 
-static int parse_materials(const char** mtl_lines, int mtl_line_count, material_t* materials, int max_materials) {
+/**
+ * Parses materials from mtl lines
+ *
+ * @param mtl_lines Array of strings from the mtl file
+ * @param mtl_line_count Number of lines in the mtl file
+ * @param materials Pointer to the array to store materials
+ * @param max_materials Maximum number of materials to parse
+ * @return The count of parsed materials
+ */
+static int parse_materials(const char** mtl_lines, int mtl_line_count, material_t* materials, int max_materials)
+{
     int mat_count = 0;
 
-    for (int i = 0; i < mtl_line_count; i++) {
-        if (strncmp(mtl_lines[i], "newmtl", 6) == 0 && mat_count < max_materials) {
+    for (int i = 0; i < mtl_line_count; i++)
+    {
+        if (strncmp(mtl_lines[i], "newmtl", 6) == 0 && mat_count < max_materials)
+        {
             sscanf(mtl_lines[i], "newmtl %255s", materials[mat_count].name);
-            for (int j = i + 1; j < i + 6 && j < mtl_line_count; j++) {
+            for (int j = i + 1; j < i + 6 && j < mtl_line_count; j++)
+            {
                 if (strncmp(mtl_lines[j], "Kd", 2) == 0)
+                {
                     sscanf(mtl_lines[j], "Kd %f %f %f", &materials[mat_count].kd.r, &materials[mat_count].kd.g, &materials[mat_count].kd.b);
+                }
                 else if (strncmp(mtl_lines[j], "Ks", 2) == 0)
+                {
                     sscanf(mtl_lines[j], "Ks %f %f %f", &materials[mat_count].ks.r, &materials[mat_count].ks.g, &materials[mat_count].ks.b);
+                }
                 else if (strncmp(mtl_lines[j], "Kr", 2) == 0)
+                {
                     sscanf(mtl_lines[j], "Kr %f %f %f", &materials[mat_count].kr.r, &materials[mat_count].kr.g, &materials[mat_count].kr.b);
+                }
             }
             mat_count++;
         }
@@ -71,7 +117,16 @@ static int parse_materials(const char** mtl_lines, int mtl_line_count, material_
     return mat_count;
 }
 
-triangle_t* triangles_load(const char* objname, const char* mtlname, size_t* size) {
+/**
+ * Loads triangles from a wavefront obj file and an mtl file
+ *
+ * @param objname Path to the obj file
+ * @param mtlname Path to the mtl file
+ * @param size Pointer to store the number of loaded triangles
+ * @return Pointer to the array of loaded triangles
+ */
+triangle_t* triangles_load(const char* objname, const char* mtlname, size_t* size)
+{
     int obj_line_count, mtl_line_count;
     char** obj_lines = load_strings(objname, &obj_line_count);
     char** mtl_lines = load_strings(mtlname, &mtl_line_count);
@@ -79,8 +134,10 @@ triangle_t* triangles_load(const char* objname, const char* mtlname, size_t* siz
     vec_t* vertices = malloc(obj_line_count * sizeof(vec_t));
     int v_count = 0;
 
-    for (int i = 0; i < obj_line_count; i++) {
-        if (obj_lines[i][0] == 'v' && obj_lines[i][1] == ' ') {
+    for (int i = 0; i < obj_line_count; i++)
+    {
+        if (obj_lines[i][0] == 'v' && obj_lines[i][1] == ' ')
+        {
             sscanf(obj_lines[i], "v %f %f %f", &vertices[v_count].x, &vertices[v_count].y, &vertices[v_count].z);
             v_count++;
         }
@@ -93,20 +150,26 @@ triangle_t* triangles_load(const char* objname, const char* mtlname, size_t* siz
     triangle_t* triangles = malloc(obj_line_count * sizeof(triangle_t));
     int tri_count = 0;
 
-    for (int i = 0; i < obj_line_count; i++) {
-        if (strncmp(obj_lines[i], "usemtl", 6) == 0) {
+    for (int i = 0; i < obj_line_count; i++)
+    {
+        if (strncmp(obj_lines[i], "usemtl", 6) == 0)
+        {
             char matname[256];
             sscanf(obj_lines[i], "usemtl %255s", matname);
 
-            for (int m = 0; m < mat_count; m++) {
-                if (strcmp(matname, materials[m].name) == 0) {
+            for (int m = 0; m < mat_count; m++)
+            {
+                if (strcmp(matname, materials[m].name) == 0)
+                {
                     current_kd = materials[m].kd;
                     current_ks = materials[m].ks;
                     current_kr = materials[m].kr;
                     break;
                 }
             }
-        } else if (obj_lines[i][0] == 'f') {
+        }
+        else if (obj_lines[i][0] == 'f')
+        {
             int v1, v2, v3;
             sscanf(obj_lines[i], "f %d %d %d", &v1, &v2, &v3);
             triangle_init(&triangles[tri_count], &vertices[v1 - 1], &vertices[v2 - 1], &vertices[v3 - 1], &current_ks, &current_kd, &current_kr);
@@ -115,12 +178,18 @@ triangle_t* triangles_load(const char* objname, const char* mtlname, size_t* siz
     }
 
     free(vertices);
-    for (int i = 0; i < obj_line_count; i++) free(obj_lines[i]);
+    for (int i = 0; i < obj_line_count; i++)
+    {
+        free(obj_lines[i]);
+    }
     free(obj_lines);
 
-    for (int i = 0; i < mtl_line_count; i++) free(mtl_lines[i]);
+    for (int i = 0; i < mtl_line_count; i++)
+    {
+        free(mtl_lines[i]);
+    }
     free(mtl_lines);
 
     *size = tri_count;
-    return realloc(triangles, tri_count * sizeof(triangle_t)); // shrink to fit
+    return realloc(triangles, tri_count * sizeof(triangle_t));
 }

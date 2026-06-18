@@ -11,7 +11,7 @@
  */
 typedef struct 
 {
-    vec_t pos;
+    vec_t position;
     vec_t kl;   
 } 
 light_t;

@@ -86,13 +86,13 @@ __device__ vec_t raytrace(vec_t origin, vec_t dir){
         dir = vec_mul(&dir, -1.0f);
         //apply point lights
         for(int i = 0; i < gpu_lights_len; i++){
-            vec_t l = vec_sub(&gpu_lights[i].pos, &intersection);
+            vec_t l = vec_sub(&gpu_lights[i].position, &intersection);
             float mag = vec_mag(&l);
             l = vec_div(&l, mag);
             mag *= mag;
             float n_dot_l = vec_dot(&n, &l);
             vec_t col_ray = lambert_blinn(&ks, &kd, &n, &l, &dir, n_dot_l);
-            float V = light_v(&intersection, &l, &n, &gpu_lights[i].pos);
+            float V = light_v(&intersection, &l, &n, &gpu_lights[i].position);
             vec_t light_shade = vec_mul(&gpu_lights[i].kl, &col_ray);
             light_shade = vec_div(&light_shade, mag);
             col = vec_ma(&light_shade, V, &col);

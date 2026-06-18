@@ -1,8 +1,5 @@
-
-# Default target
 all: default
 
-# Set compiler and additional flags according to the OS
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
     CC = clang
@@ -15,4 +12,4 @@ default:
 
 clean:
 	rm -f raytracer
-	rm -f render.bmp
+	rm -f *.bmp

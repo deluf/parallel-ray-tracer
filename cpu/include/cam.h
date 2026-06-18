@@ -3,17 +3,37 @@
 
 #include "vec.h"
 
-typedef struct cam_t {
-    vec_t pos;
-    vec_t rot;
-    float fov;
+/**
+ * Viewport structure
+ */
+typedef struct viewport_t
+{
+    vec_t top_left;
+    vec_t top_right;
+    vec_t bottom_left;
+} viewport_t;
+
+/**
+ * The cam_t structure represents a point camera
+ * 
+ *  A point in space from which the scene is observed
+ */
+typedef struct cam_t 
+{
+    vec_t position;
+    viewport_t viewport;
 } cam_t;
 
-void cam_init(cam_t* cam, const vec_t* pos, float fov);
-void cam_rotate(cam_t* cam, vec_t* p);
-void cam_rotateX(cam_t* cam, vec_t* p);
-void cam_rotateY(cam_t* cam, vec_t* p);
-void cam_rotateZ(cam_t* cam, vec_t* p);
-void cam_calculate_screen_coords(cam_t* cam, vec_t* vecs, float aspect_ratio);
+/**
+ * Initializes a camera structure
+ *
+ * @param cam Pointer to the camera structure to initialize
+ * @param position Position of the camera in the scene
+ * @param rotation 3D rotation of the camera (in radians)
+ * @param fov Field of view angle in radians
+ * @param aspect_ratio Width to height ratio of the viewport
+ * @return 0 on success, -1 on error
+ */
+int cam_init(cam_t* cam, const vec_t* position, const vec_t* rotation, float fov, float aspect_ratio);
 
 #endif

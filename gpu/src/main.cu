@@ -85,8 +85,8 @@ int main(int argc, char** argv) {
 
     vec_t cam_pos = {0, -9, 3};
     cam_init(&cam, &cam_pos, M_PI/3.2);
-    cam.rot.x = -M_PI/12;
-    //cam.rot.z = M_PI/10;
+    cam.rotation.x = -M_PI/12;
+    //cam.rotation.z = M_PI/10;
 
     printf("Loading scene...\n");
 
