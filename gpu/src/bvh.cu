@@ -4,13 +4,14 @@
 #include "gpu.cuh"
 #include "options.cuh"
 
-#include <time.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <float.h>
-#include <limits.h>
+#include <time.h>      // time()
+#include <math.h>      // fminf(), fmaxf()
+#include <stdio.h>     // printf(), fprintf(), stderr
+#include <stdlib.h>    // malloc(), free(), qsort(), exit(), rand(), RAND_MAX, EXIT_FAILURE
+#include <string.h>    // memset()
+#include <float.h>     // FLT_MAX, FLT_MIN
+#include <limits.h>    // INT_MAX, INT_MIN
+#include <cuda_fp16.h> // half, half2, __h2div(), __hsub2(), __hdiv(), __hsub(), __hmin2(), __hmax2(), __hmin(), __hmax(), __hge(), __hgt(), __float2half(), __hlt(), __floats2half2_rn()
 
 extern triangle_t* triangles;
 extern int triangles_len;
@@ -21,50 +22,124 @@ int bvh_len = 1;
 
 extern const float EPSILON;
 
-#define GEN_SORT(x) int sort_ ## x (const void *a, const void *b) { \
-    int idx1 = *(int*)a; \
-    int idx2 = *(int*)b; \
-    float diff = triangles[idx1].centroid[x] - triangles[idx2].centroid[x]; \
-    if(diff < 0.0f) return -1; \
-    if(diff > 0.0f) return +1; \
-    return 0; \
+/**
+ * Comparator function for sorting triangles by centroid X coordinate
+ *
+ * @param a Pointer to the first triangle index
+ * @param b Pointer to the second triangle index
+ * @return Negative if first is less, positive if greater, zero if equal
+ */
+static int sort_0(const void* a, const void* b)
+{
+    int idx1 = *(const int*)a;
+    int idx2 = *(const int*)b;
+    float diff = triangles[idx1].centroid[0] - triangles[idx2].centroid[0];
+    if (diff < 0.0f)
+    {
+        return -1;
+    }
+    if (diff > 0.0f)
+    {
+        return 1;
+    }
+    return 0;
 }
 
-GEN_SORT(0)
-GEN_SORT(1)
-GEN_SORT(2)
+/**
+ * Comparator function for sorting triangles by centroid Y coordinate
+ *
+ * @param a Pointer to the first triangle index
+ * @param b Pointer to the second triangle index
+ * @return Negative if first is less, positive if greater, zero if equal
+ */
+static int sort_1(const void* a, const void* b)
+{
+    int idx1 = *(const int*)a;
+    int idx2 = *(const int*)b;
+    float diff = triangles[idx1].centroid[1] - triangles[idx2].centroid[1];
+    if (diff < 0.0f)
+    {
+        return -1;
+    }
+    if (diff > 0.0f)
+    {
+        return 1;
+    }
+    return 0;
+}
 
-typedef int (*sort_func)(const void *, const void *);
-sort_func sort_algs[3] = {sort_0, sort_1, sort_2};
+/**
+ * Comparator function for sorting triangles by centroid Z coordinate
+ *
+ * @param a Pointer to the first triangle index
+ * @param b Pointer to the second triangle index
+ * @return Negative if first is less, positive if greater, zero if equal
+ */
+static int sort_2(const void* a, const void* b)
+{
+    int idx1 = *(const int*)a;
+    int idx2 = *(const int*)b;
+    float diff = triangles[idx1].centroid[2] - triangles[idx2].centroid[2];
+    if (diff < 0.0f)
+    {
+        return -1;
+    }
+    if (diff > 0.0f)
+    {
+        return 1;
+    }
+    return 0;
+}
 
-static vec_t aabb_center(const aabb_t* aabb){
+typedef int (*sort_func)(const void*, const void*);
+static sort_func sort_algs[3] = {sort_0, sort_1, sort_2};
+
+/**
+ * Calculates the center of an AABB
+ * 
+ * @param aabb Bounding box
+ * @return Center vector
+ */
+static vec_t aabb_center(const aabb_t* aabb)
+{
     vec_t tmp = vec_add(&aabb->min, &aabb->max);
     return vec_mul(&tmp, 0.5f);
 }
 
-static float aabb_area(const aabb_t* aabb){
+/**
+ * Calculates the surface area of an AABB
+ * 
+ * @param aabb Bounding box
+ * @return Surface area
+ */
+static float aabb_area(const aabb_t* aabb)
+{
     vec_t size = vec_sub(&aabb->max, &aabb->min);
     return vec_dot(&size, &size);
 }
 
-__device__ static half aabb_intersect(const haabb_t* aabb, const hvec_t* origin, const hvec_t* dir) {
-    // XY slab
+/**
+ * Intersects a ray with an AABB on the device
+ * 
+ * @param aabb Bounding box
+ * @param origin Origin of the ray
+ * @param dir Direction of the ray
+ * @return Distance to the intersection, or FLT_MAX if no intersection
+ */
+__device__ static half aabb_intersect(const haabb_t* aabb, const hvec_t* origin, const hvec_t* dir)
+{
     half2 t1_xy = __h2div(__hsub2(aabb->min.xy, origin->xy), dir->xy);
     half2 t2_xy = __h2div(__hsub2(aabb->max.xy, origin->xy), dir->xy);
 
-    // Z slab (only .x used)
     half t1_z = __hdiv(__hsub(aabb->min.zw.x, origin->zw.x), dir->zw.x);
     half t2_z = __hdiv(__hsub(aabb->max.zw.x, origin->zw.x), dir->zw.x);
 
-    // Min/max for xy
     half2 tmin2 = __hmin2(t1_xy, t2_xy);
     half2 tmax2 = __hmax2(t1_xy, t2_xy);
 
-    // Reduce half2 to half
     half tmin = __hmax(tmin2.x, tmin2.y);
     half tmax = __hmin(tmax2.x, tmax2.y);
 
-    // Z min/max
     half tz1 = t1_z;
     half tz2 = t2_z;
 
@@ -73,16 +148,32 @@ __device__ static half aabb_intersect(const haabb_t* aabb, const hvec_t* origin,
 
     bool cond = __hge(tmax, tmin) && __hgt(tmax, 0.0f);
     if (cond)
+    {
         return tmin;
+    }
     return __float2half(FLT_MAX);
 }
 
-static void aabb_grow_pt(aabb_t* aabb, const vec_t* point){
+/**
+ * Expands an AABB to include a point
+ * 
+ * @param aabb Bounding box
+ * @param point Point vector to include
+ */
+static void aabb_grow_pt(aabb_t* aabb, const vec_t* point)
+{
     aabb->min = vec_min(&aabb->min, point);
     aabb->max = vec_max(&aabb->max, point);
 }
 
-static void aabb_grow_tr(aabb_t* aabb, int t_idx){
+/**
+ * Expands an AABB to include a triangle
+ * 
+ * @param aabb Bounding box
+ * @param t_idx Triangle index
+ */
+static void aabb_grow_tr(aabb_t* aabb, int t_idx)
+{
     triangle_t* tr = &triangles[t_idx];
     aabb_grow_pt(aabb, &tr->coords[0]);
     aabb_grow_pt(aabb, &tr->coords[1]);
@@ -94,23 +185,38 @@ static int max_stats = INT_MIN;
 static int sum_stats = 0;
 static int count_stats = 0;
 
-static void bvh_split(int node_idx, int depth){
+/**
+ * Recursively splits a BVH node
+ * 
+ * @param node_idx Index of the parent node
+ * @param depth Current recursion depth
+ */
+static void bvh_split(int node_idx, int depth)
+{
     bvh_t* parent = &bvh[node_idx];
-    if(bvh_len >= 2*triangles_len){
+    if (bvh_len >= 2 * triangles_len)
+    {
         printf("BVH SPLIT: MAX SIZE REACHED\n");
         return;
     }
-    if(depth == BVH_MAX_ITER || parent->tr_len <= BVH_ELEMENT_THRESHOLD) {
-        if(!parent->tr_len)
+    if (depth == BVH_MAX_ITER || parent->tr_len <= BVH_ELEMENT_THRESHOLD) 
+    {
+        if (parent->tr_len == 0)
+        {
             parent->child = 0;
-        #if BVH_METRICS == 1
+        }
+#if BVH_METRICS == 1
         sum_stats += parent->tr_len;
         count_stats += 1;
-        if(parent->tr_len < min_stats)
+        if (parent->tr_len < min_stats)
+        {
             min_stats = parent->tr_len;
-        if(parent->tr_len > max_stats)
+        }
+        if (parent->tr_len > max_stats)
+        {
             max_stats = parent->tr_len;
-        #endif
+        }
+#endif
         return;
     }
 
@@ -120,101 +226,121 @@ static void bvh_split(int node_idx, int depth){
     bvh_t* left = &bvh[child_idx];
     bvh_t* right = &bvh[child_idx + 1];
     left->tr_idx = parent->tr_idx;
-    left->aabb.min = vec_t{1e10f, 1e10f, 1e10f};
-    left->aabb.max = vec_t{-1e10f, -1e10f, -1e10f};
+    left->aabb.min = vec_t{1e10f, 1e10f, 1e10f, 0.0f};
+    left->aabb.max = vec_t{-1e10f, -1e10f, -1e10f, 0.0f};
     right->tr_idx = parent->tr_idx;
-    right->aabb.min = vec_t{1e10f, 1e10f, 1e10f};
-    right->aabb.max = vec_t{-1e10f, -1e10f, -1e10f};
+    right->aabb.min = vec_t{1e10f, 1e10f, 1e10f, 0.0f};
+    right->aabb.max = vec_t{-1e10f, -1e10f, -1e10f, 0.0f};
 
-    int splitAxis;
-    float splitPos;
+    int splitAxis = 0;
+    float splitPos = 0.0f;
     vec_t center = aabb_center(&parent->aabb);
     vec_t size = vec_sub(&parent->aabb.max, &parent->aabb.min);
 
-    #if BVH_HEURISTIC == 5
+#if BVH_HEURISTIC == 5
     aabb_t aabb_l;
     aabb_t aabb_r;
     splitAxis = 0;
     float best_score = FLT_MAX;
-    for(int i = 0; i < 3; i++){
-        aabb_l.max = aabb_r.max = (vec_t){FLT_MIN, FLT_MIN, FLT_MIN};
-        aabb_l.min = aabb_r.min = (vec_t){FLT_MAX, FLT_MAX, FLT_MAX};
+    for (int i = 0; i < 3; i++)
+    {
+        aabb_l.max = aabb_r.max = vec_t{FLT_MIN, FLT_MIN, FLT_MIN, 0.0f};
+        aabb_l.min = aabb_r.min = vec_t{FLT_MAX, FLT_MAX, FLT_MAX, 0.0f};
         qsort(tri_idx + parent->tr_idx, parent->tr_len, sizeof(int), sort_algs[i]);
-        for(int j = parent->tr_idx; j < parent->tr_idx + parent->tr_len; j++){
+        for (int j = parent->tr_idx; j < parent->tr_idx + parent->tr_len; j++)
+        {
             int t_idx = tri_idx[j];
-            triangle_t* t = &triangles[t_idx];
             bool inA = j < parent->tr_idx + (parent->tr_len / 2);
             aabb_grow_tr(inA ? &aabb_l : &aabb_r, t_idx);
         }
-        float score = (parent->tr_len/2)*aabb_area(&aabb_l) + (parent->tr_len-parent->tr_len/2)*aabb_area(&aabb_r);
-        if(score < best_score){
+        float score = (parent->tr_len / 2) * aabb_area(&aabb_l) + (parent->tr_len - parent->tr_len / 2) * aabb_area(&aabb_r);
+        if (score < best_score)
+        {
             splitAxis = i;
             best_score = score;
         }
     }
-    #endif
+#endif
 
-    #if BVH_HEURISTIC == 6
+#if BVH_HEURISTIC == 6
     splitAxis = 0;
-    splitPos = 0;
+    splitPos = 0.0f;
     float best_score = FLT_MAX;
-    for(int axis = 0; axis < 3; axis++){
-        #if SAH_BIN_SIZE == -1
-        for(int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len; i++){
-        #else
-        for(int i = 0; i < SAH_BIN_SIZE; i++){
-        #endif
+    for (int axis = 0; axis < 3; axis++)
+    {
+#if SAH_BIN_SIZE == -1
+        for (int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len; i++)
+        {
+#else
+        for (int i = 0; i < SAH_BIN_SIZE; i++)
+        {
+#endif
             aabb_t aabb_l, aabb_r;
-            aabb_l.max = aabb_r.max = vec_t{FLT_MIN, FLT_MIN, FLT_MIN};
-            aabb_l.min = aabb_r.min = vec_t{FLT_MAX, FLT_MAX, FLT_MAX};
-            #if SAH_BIN_SIZE == -1
+            aabb_l.max = aabb_r.max = vec_t{FLT_MIN, FLT_MIN, FLT_MIN, 0.0f};
+            aabb_l.min = aabb_r.min = vec_t{FLT_MAX, FLT_MAX, FLT_MAX, 0.0f};
+#if SAH_BIN_SIZE == -1
             int t_idx = tri_idx[i];
             triangle_t* t = &triangles[t_idx];
             float split = t->centroid[axis];
-            #else
+#else
             vec_t size = vec_sub(&parent->aabb.max, &parent->aabb.min);
             float split = parent->aabb.min.arr[axis] + size.arr[axis] * ((float)i / SAH_BIN_SIZE);
-            #endif
+#endif
             int cl = 0;
             int cr = 0;
-            for(int j = parent->tr_idx; j < parent->tr_idx + parent->tr_len; j++){
+            for (int j = parent->tr_idx; j < parent->tr_idx + parent->tr_len; j++)
+            {
                 int t_idx = tri_idx[j];
                 triangle_t* t = &triangles[t_idx];
                 bool inA = t->centroid[axis] < split;
                 aabb_t* aabb = inA ? &aabb_l : &aabb_r;
                 aabb_grow_tr(aabb, t_idx);
-                if(inA) cl++ ; else cr++;
+                if (inA)
+                {
+                    cl++;
+                }
+                else
+                {
+                    cr++;
+                }
             }
-            float score = cl*aabb_area(&aabb_l) + cr*aabb_area(&aabb_r);
-            if(score < best_score){
+            float score = cl * aabb_area(&aabb_l) + cr * aabb_area(&aabb_r);
+            if (score < best_score)
+            {
                 best_score = score;
                 splitAxis = axis;
                 splitPos = split;
             }
         }
     }
-    #endif
+#endif
 
-    #if BVH_HEURISTIC == 4
+#if BVH_HEURISTIC == 4
     splitAxis = 0;
-    if(size.y > size.x) splitAxis = 1;
-    if(size.z > size.x && size.z > size.y) splitAxis = 2;
+    if (size.y > size.x)
+    {
+        splitAxis = 1;
+    }
+    if (size.z > size.x && size.z > size.y)
+    {
+        splitAxis = 2;
+    }
     splitPos = center.arr[splitAxis];
-    #endif
+#endif
 
-    // special behavior for median split
-    #if (BVH_HEURISTIC == 4) || (BVH_HEURISTIC == 5)
+#if (BVH_HEURISTIC == 4) || (BVH_HEURISTIC == 5)
     qsort(tri_idx + parent->tr_idx, parent->tr_len, sizeof(int), sort_algs[splitAxis]);
 
-    for(int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len; i++){
+    for (int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len; i++)
+    {
         int t_idx = tri_idx[i];
-        triangle_t* t = &triangles[t_idx];
         bool inA = i < parent->tr_idx + (parent->tr_len / 2);
         bvh_t* child = inA ? left : right;
         aabb_grow_tr(&child->aabb, t_idx);
         child->tr_len += 1;
 
-        if(inA){
+        if (inA)
+        {
             int swap = left->tr_idx + left->tr_len - 1;
             int tmp = tri_idx[i];
             tri_idx[i] = tri_idx[swap];
@@ -222,45 +348,53 @@ static void bvh_split(int node_idx, int depth){
             right->tr_idx += 1;
         }
     }
-    #else
+#else
     bool intersectA = false;
     bool intersectB = false;
-    while(!intersectA || !intersectB){
+    while (!intersectA || !intersectB)
+    {
         intersectA = false;
         intersectB = false;
-        #if BVH_HEURISTIC == 6
+#if BVH_HEURISTIC == 6
         break;
-        #elif BVH_HEURISTIC == 0
+#elif BVH_HEURISTIC == 0
         splitAxis = 0;
         splitPos = center.arr[splitAxis];
         break;
-        #elif BVH_HEURISTIC == 1
+#elif BVH_HEURISTIC == 1
         splitAxis = 0;
-        if(size.y > size.x) splitAxis = 1;
-        if(size.z > size.x && size.z > size.y) splitAxis = 2;
+        if (size.y > size.x)
+        {
+            splitAxis = 1;
+        }
+        if (size.z > size.x && size.z > size.y)
+        {
+            splitAxis = 2;
+        }
         splitPos = center.arr[splitAxis];
         break;
-        #elif BVH_HEURISTIC == 2
+#elif BVH_HEURISTIC == 2
         splitAxis = rand() % 4;
         splitPos = center.arr[splitAxis];
         break;
-        #elif BVH_HEURISTIC == 3
+#elif BVH_HEURISTIC == 3
         splitAxis = rand() % 4;
         splitPos = center.arr[splitAxis];
-        splitPos += ((float)rand()/RAND_MAX - 0.5f) * (size.arr[splitAxis]);
-        
+        splitPos += (((float)rand() / RAND_MAX) - 0.5f) * (size.arr[splitAxis]);
 
-        for(int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len && (!intersectA || !intersectB); i++){
+        for (int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len && (!intersectA || !intersectB); i++)
+        {
             int t_idx = tri_idx[i];
             triangle_t* t = &triangles[t_idx];
             bool inA = t->centroid[splitAxis] < splitPos;
             intersectA |= inA;
             intersectB |= !inA;
         }
-        #endif
+#endif
     }
 
-    for(int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len; i++){
+    for (int i = parent->tr_idx; i < parent->tr_idx + parent->tr_len; i++)
+    {
         int t_idx = tri_idx[i];
         triangle_t* t = &triangles[t_idx];
         bool inA = t->centroid[splitAxis] < splitPos;
@@ -268,7 +402,8 @@ static void bvh_split(int node_idx, int depth){
         aabb_grow_tr(&child->aabb, t_idx);
         child->tr_len += 1;
 
-        if(inA){
+        if (inA)
+        {
             int swap = left->tr_idx + left->tr_len - 1;
             int tmp = tri_idx[i];
             tri_idx[i] = tri_idx[swap];
@@ -276,7 +411,7 @@ static void bvh_split(int node_idx, int depth){
             right->tr_idx += 1;
         }
     }
-    #endif
+#endif
 
     parent->child = child_idx;
     parent->tr_len = 0;
@@ -285,12 +420,13 @@ static void bvh_split(int node_idx, int depth){
     bvh_split(parent->child + 1, depth + 1);
 }
 
-__device__ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, float* t, float light_dist2) {
+__device__ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_t* dir, float* t, float light_dist2) 
+{
     int stack[32];
     int stackIdx = 0;
 
-    // Convert to hvec_t
-    hvec_t h_origin, h_dir;
+    hvec_t h_origin;
+    hvec_t h_dir;
     h_origin.xy = __floats2half2_rn(origin->x, origin->y);
     h_origin.zw = __floats2half2_rn(origin->z, 0.0f);
     h_dir.xy = __floats2half2_rn(dir->x, dir->y);
@@ -298,31 +434,40 @@ __device__ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_
 
     stack[stackIdx++] = node_idx;
 
-    while (stackIdx) {
+    while (stackIdx > 0) 
+    {
         hbvh_t node = gpu_bvh[stack[--stackIdx]];
-        if (node.tr_len) {
-            for (int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++) {
+        if (node.tr_len > 0) 
+        {
+            for (int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++) 
+            {
                 int norm_tmp;
                 int idx_tmp = gpu_tri_idx[i];
                 gpu_triangle_t tr = gpu_triangles[idx_tmp];
                 float t_tmp = hit_triangle(origin, dir, &tr, &norm_tmp);
-                if (t_tmp < *t) {
+                if (t_tmp < *t) 
+                {
                     *t = t_tmp;
                     vec_t dir_scaled = vec_mul(dir, *t);
                     vec_t intersection = vec_add(origin, &dir_scaled);
                     vec_t o_minus_i = vec_sub(origin, &intersection);
                     if (light_dist2 > vec_dot(&o_minus_i, &o_minus_i))
+                    {
                         return false;
+                    }
                 }
             }
-        } else if (node.child) {
+        } 
+        else if (node.child > 0) 
+        {
             int near_idx = node.child;
             int far_idx = node.child + 1;
             hbvh_t left = gpu_bvh[node.child];
             hbvh_t right = gpu_bvh[node.child + 1];
             half near_t = aabb_intersect(&left.aabb, &h_origin, &h_dir);
             half far_t = aabb_intersect(&right.aabb, &h_origin, &h_dir);
-            if (__hlt(far_t, near_t)) {
+            if (__hlt(far_t, near_t)) 
+            {
                 int tmp_idx = near_idx;
                 half tmp_t = near_t;
                 near_idx = far_idx;
@@ -331,20 +476,25 @@ __device__ bool bvh_light_traverse(int node_idx, const vec_t* origin, const vec_
                 far_t = tmp_t;
             }
             if (__hlt(far_t, __float2half(*t)))
+            {
                 stack[stackIdx++] = far_idx;
+            }
             if (__hlt(near_t, __float2half(*t)))
+            {
                 stack[stackIdx++] = near_idx;
+            }
         }
     }
     return true;
 }
 
-__device__ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx) {
+__device__ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir, int* norm_dir, float* t, int* t_idx) 
+{
     int stack[32];
     int stackIdx = 0;
 
-    // Convert to hvec_t
-    hvec_t h_origin, h_dir;
+    hvec_t h_origin;
+    hvec_t h_dir;
     h_origin.xy = __floats2half2_rn(origin->x, origin->y);
     h_origin.zw = __floats2half2_rn(origin->z, 0.0f);
     h_dir.xy = __floats2half2_rn(dir->x, dir->y);
@@ -352,22 +502,28 @@ __device__ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir
 
     stack[stackIdx++] = node_idx;
 
-    while (stackIdx) {
+    while (stackIdx > 0) 
+    {
         hbvh_t node = gpu_bvh[stack[--stackIdx]];
 
-        if (node.tr_len) {
-            for (int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++) {
+        if (node.tr_len > 0) 
+        {
+            for (int i = node.tr_idx; i < node.tr_idx + node.tr_len; i++) 
+            {
                 int norm_tmp;
                 int idx_tmp = gpu_tri_idx[i];
                 gpu_triangle_t tr = gpu_triangles[idx_tmp];
                 float t_tmp = hit_triangle(origin, dir, &tr, &norm_tmp);
-                if (t_tmp < *t) {
+                if (t_tmp < *t) 
+                {
                     *t = t_tmp;
                     *norm_dir = norm_tmp;
                     *t_idx = idx_tmp;
                 }
             }
-        } else if (node.child) {
+        } 
+        else if (node.child > 0) 
+        {
             int near_idx = node.child;
             int far_idx = node.child + 1;
             hbvh_t left = gpu_bvh[node.child];
@@ -375,7 +531,8 @@ __device__ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir
             half near_t = aabb_intersect(&left.aabb, &h_origin, &h_dir);
             half far_t = aabb_intersect(&right.aabb, &h_origin, &h_dir);
 
-            if (__hlt(far_t, near_t)) {
+            if (__hlt(far_t, near_t)) 
+            {
                 int tmp_idx = near_idx;
                 half tmp_t = near_t;
                 near_idx = far_idx;
@@ -384,45 +541,54 @@ __device__ void bvh_traverse(int node_idx, const vec_t* origin, const vec_t* dir
                 far_t = tmp_t;
             }
             if (__hlt(far_t, __float2half(*t)))
+            {
                 stack[stackIdx++] = far_idx;
+            }
             if (__hlt(near_t, __float2half(*t)))
+            {
                 stack[stackIdx++] = near_idx;
+            }
         }
     }
 }
 
-void bvh_build(triangle_t* triangles, size_t triangles_len){
-    #if SEED == 0
-    srand(time(NULL));
-    #else
+void bvh_build(triangle_t* triangles, size_t triangles_len)
+{
+#if SEED == 0
+    srand((unsigned int)time(NULL));
+#else
     srand(SEED);
-    #endif
+#endif
 
-    if(!triangles_len){
-        printf("no triangles, cannot build bvh.\n");
+    if (triangles_len == 0)
+    {
+        fprintf(stderr, "Error: no triangles, cannot build bvh\n");
         exit(EXIT_FAILURE);
     }
 
-    tri_idx = (int*)(malloc(sizeof(int)*triangles_len));
-    for(int i = 0; i < triangles_len; i++)
+    tri_idx = (int*)malloc(sizeof(int) * triangles_len);
+    for (int i = 0; i < (int)triangles_len; i++)
+    {
         tri_idx[i] = i;
+    }
 
-    bvh = (bvh_t*)malloc(sizeof(bvh_t)*2*triangles_len);
-    memset(bvh, 0, sizeof(bvh_t)*2*triangles_len);
+    bvh = (bvh_t*)malloc(sizeof(bvh_t) * 2 * triangles_len);
+    memset(bvh, 0, sizeof(bvh_t) * 2 * triangles_len);
     bvh->tr_len = triangles_len;
-    bvh->aabb.min = vec_t{1e10f, 1e10f, 1e10f};
-    bvh->aabb.max = vec_t{-1e10f, -1e10f, -1e10f};
-    for(int i = 0; i < triangles_len; i++){
+    bvh->aabb.min = vec_t{1e10f, 1e10f, 1e10f, 0.0f};
+    bvh->aabb.max = vec_t{-1e10f, -1e10f, -1e10f, 0.0f};
+    for (int i = 0; i < (int)triangles_len; i++)
+    {
         aabb_grow_tr(&bvh->aabb, i);
     }
 
     bvh_split(0, 0);
 
-    #if BVH_METRICS == 1
+#if BVH_METRICS == 1
     printf("min number of triangle: %d\n", min_stats);
     printf("max number of triangle: %d\n", max_stats);
-    printf("avg number of triangle: %.2f\n", (float)sum_stats/count_stats);
+    printf("avg number of triangle: %.2f\n", (float)sum_stats / count_stats);
     printf("number of leaf: %d\n", count_stats);
-    printf("bvh size (bytes): %zd\n", sizeof(bvh_t)*bvh_len);
-    #endif
+    printf("bvh size (bytes): %zd\n", sizeof(bvh_t) * bvh_len);
+#endif
 }

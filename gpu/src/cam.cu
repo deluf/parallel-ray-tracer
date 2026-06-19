@@ -1,48 +1,109 @@
 #include "cam.cuh"
 
-#include <math.h>
+#include <math.h>   // cosf(), sinf(), tanf()
+#include <stdio.h>  // fprintf(), stderr
 
-__host__ __device__ void cam_init(cam_t* cam, const vec_t* pos, float fov){
-    cam->pos = *pos;
-    cam->rotation = vec_t{0, 0, 0};
-    cam->viewport_scaling_factor = 1.0/tanf(fov/2.0f);
+/**
+ * Rotates a point around the X axis
+ *
+ * @param p Pointer to the point to rotate
+ * @param rotation Angle to rotate in radians
+ */
+static void cam_rotate_x(vec_t* p, float rotation)
+{
+    float cos_x = cosf(rotation);
+    float sin_x = sinf(rotation);
+    float y = p->y * cos_x - p->z * sin_x;
+    float z = p->y * sin_x + p->z * cos_x;
+    p->y = y;
+    p->z = z;
 }
 
-__host__ __device__ void cam_rotate(cam_t* cam, vec_t* p){
-    cam_rotate_y(cam, p);
-    cam_rotate_x(cam, p);
-    cam_rotate_z(cam, p);
+/**
+ * Rotates a point around the Y axis
+ *
+ * @param p Pointer to the point to rotate
+ * @param rotation Angle to rotate in radians
+ */
+static void cam_rotate_y(vec_t* p, float rotation)
+{
+    float cos_y = cosf(rotation);
+    float sin_y = sinf(rotation);
+    float x = p->x * cos_y + p->z * sin_y;
+    float z = -p->x * sin_y + p->z * cos_y;
+    p->x = x;
+    p->z = z;
 }
 
-__host__ __device__ void cam_rotate_x(cam_t* cam, vec_t* p){
-    vec_t tmp = *p;
-    p->y = tmp.y*cosf(cam->rotation.x)-tmp.z*sinf(cam->rotation.x);
-    p->z = tmp.y*sinf(cam->rotation.x)+tmp.z*cosf(cam->rotation.x);
+/**
+ * Rotates a point around the Z axis
+ *
+ * @param p Pointer to the point to rotate
+ * @param rotation Angle to rotate in radians
+ */
+static void cam_rotate_z(vec_t* p, float rotation)
+{
+    float cos_z = cosf(rotation);
+    float sin_z = sinf(rotation);
+    float x = p->x * cos_z - p->y * sin_z;
+    float y = p->x * sin_z + p->y * cos_z;
+    p->x = x;
+    p->y = y;
 }
 
-__host__ __device__ void cam_rotate_y(cam_t* cam, vec_t* p){
-    vec_t tmp = *p;
-    p->x = tmp.x*cosf(cam->rotation.y)+tmp.z*sinf(cam->rotation.y);
-    p->z = -tmp.x*sinf(cam->rotation.y)+tmp.z*cosf(cam->rotation.y);
+/**
+ * Rotates a point around the camera rotation axes
+ *
+ * @param p Pointer to the point to rotate
+ * @param rotation 3D rotation of the camera
+ */
+static void cam_rotate_point(vec_t* p, const vec_t* rotation)
+{
+    cam_rotate_y(p, rotation->y);
+    cam_rotate_x(p, rotation->x);
+    cam_rotate_z(p, rotation->z);
 }
 
-__host__ __device__ void cam_rotate_z(cam_t* cam, vec_t* p){
-    vec_t tmp = *p;
-    p->x = tmp.x*cosf(cam->rotation.z)-tmp.y*sinf(cam->rotation.z);
-    p->y = tmp.x*sinf(cam->rotation.z)+tmp.y*cosf(cam->rotation.z);
-}
+int cam_init(cam_t* cam, const vec_t* position, const vec_t* rotation, float fov, float aspect_ratio)
+{
+    if (!cam || !position || !rotation || fov <= 0.0f || fov >= 3.14159265358979323846f || aspect_ratio <= 0.0f)
+    {
+        fprintf(stderr, "Error: cam_init function called with bad parameters\n");
+        return -1;
+    }
+    cam->position = *position;
 
-__host__ __device__ void cam_calculate_screen_coords(cam_t* cam, vec_t* vecs, float aspect_ratio){
-    vecs[0] = vec_t{-1*aspect_ratio, cam->viewport_scaling_factor, +1};
-    vecs[1] = vec_t{+1*aspect_ratio, cam->viewport_scaling_factor, +1};
-    vecs[2] = vec_t{-1*aspect_ratio, cam->viewport_scaling_factor, -1};
-    cam_rotate(cam, &vecs[0]);
-    cam_rotate(cam, &vecs[1]);
-    cam_rotate(cam, &vecs[2]);
-    
-    //translate using camera coordinates;
-    vecs[0] = vec_add(&vecs[0], &cam->pos);
-    vecs[1] = vec_add(&vecs[1], &cam->pos);
-    vecs[2] = vec_add(&vecs[2], &cam->pos);
-    
+    float viewport_scaling_factor = 1.0f / tanf(fov / 2.0f);
+
+    cam->viewport.top_left = vec_t
+    {
+        -aspect_ratio,
+        viewport_scaling_factor,
+        1.0f,
+        0.0f
+    };
+    cam->viewport.top_right = vec_t
+    {
+        aspect_ratio,
+        viewport_scaling_factor,
+        1.0f,
+        0.0f
+    };
+    cam->viewport.bottom_left = vec_t
+    {
+        -aspect_ratio,
+        viewport_scaling_factor,
+        -1.0f,
+        0.0f
+    };
+
+    cam_rotate_point(&cam->viewport.top_left, rotation);
+    cam_rotate_point(&cam->viewport.top_right, rotation);
+    cam_rotate_point(&cam->viewport.bottom_left, rotation);
+
+    cam->viewport.top_left = vec_add(&cam->viewport.top_left, &cam->position);
+    cam->viewport.top_right = vec_add(&cam->viewport.top_right, &cam->position);
+    cam->viewport.bottom_left = vec_add(&cam->viewport.bottom_left, &cam->position);
+
+    return 0;
 }

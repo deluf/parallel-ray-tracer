@@ -1,10 +1,7 @@
-/* scene options */
+#ifndef __OPTIONS_CUH__
+#define __OPTIONS_CUH__
 
-#define SCENE "car_boxed"
-/*
-    car_only
-    car_boxed
-*/
+// ########################### WORKLOAD VARIATIONS ###########################
 
 #define WIDTH (1920)
 #define HEIGHT (1080)
@@ -21,19 +18,25 @@ Reference (16:9):
     8k:     7680 x 4320
 */
 
-/* number of frames to be rendered */
+// ######################## DO NOT TOUCH IF BENCHMARKING ########################
+
+#define SCENE "car_boxed"
+/*
+    car_only
+    car_boxed
+*/
+
+/* Number of frames to be rendered */
 #define ITERATIONS 100
 #define WARMUP 50
 
-/* number of bounces per ray */
+/* Number of bounces per ray */
 #define BOUNCES 4
 
-/* bvh option */
-
-/* max depth of bvh */
+/* Max depth of BVH */
 #define BVH_MAX_ITER 32
 
-/* bvh recursion is stopped if the parent contains less than BVH_ELEMENT_THRESHOLD */
+/* BVH recursion is stopped if the parent contains less than BVH_ELEMENT_THRESHOLD */
 #define BVH_ELEMENT_THRESHOLD 2
 
 /* 
@@ -49,7 +52,7 @@ Reference (16:9):
 */
 #define BVH_HEURISTIC 6
 
-/* define the size of the bin to use for heuristic 6. If -1 is specified a brute force approach will be used */
+/* Define the size of the bin to use for heuristic 6. If -1 is specified a brute force approach will be used */
 #define SAH_BIN_SIZE 32
 
 /* BVH random split seed: only valid if either option 2 or 3 above are used */
@@ -59,5 +62,7 @@ Reference (16:9):
     1: fixed seed (BVH is always the same) -> Useful to do proper benchmarks
 */
 
-/* print bvh metrics */
+/* Print BVH metrics */
 #define BVH_METRICS 1
+
+#endif

@@ -1,15 +1,24 @@
-#ifndef __LIGHT_H__
-#define __LIGHT_H__
+#ifndef __LIGHT_CUH__
+#define __LIGHT_CUH__
 
-#include <stddef.h>
+#include <stddef.h>  // size_t
 
 #include "vec.cuh"
 
-struct light_t {
-    vec_t pos;
+typedef struct light_t
+{
+    vec_t position;
     vec_t kl;
-};
+}
+light_t;
 
-light_t* lights_load(const char* filename, int* size);
+/**
+ * Loads point lights from a file
+ *
+ * @param filename Path to the lights file
+ * @param count Pointer to store the number of loaded lights
+ * @return Pointer to dynamically allocated array of lights, or NULL on failure
+ */
+light_t* load_lights(const char* filename, size_t* count);
 
 #endif
